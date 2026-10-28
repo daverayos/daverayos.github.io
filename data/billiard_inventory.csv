@@ -1,0 +1,33 @@
+SKU,Product Name,Category,Brand,Description,Unit Price,Cost Price,Current Stock,Reorder Point,Supplier,Stock Status,Unit
+BIL-CUE-001,Apex Pro Maple Pool Cue,Pool Cues,Predator Cue Co.,Professional 13mm Canadian maple pool cue with leather wrap.,"₱ 12,500.00","₱ 8,200.00",25,10,CueCraft Distributors Inc.,In Stock,Piece
+BIL-CUE-002,Velocity Carbon Fiber Cue,Pool Cues,Lucasi Custom,Lightweight carbon composite shaft billiard cue with low deflection.,"₱ 24,500.00","₱ 16,000.00",4,5,CueCraft Distributors Inc.,Low Stock,Piece
+BIL-CUE-003,"Dragon Series House Cue 57""",Pool Cues,Action Cues,Durable 1-piece hardwood house cue for pool halls and recreation centers.,"₱ 1,850.00","₱ 1,100.00",0,15,Metro Sports Supplies,Out of Stock,Piece
+BIL-TIP-001,Kamui Black Layered Tip (Medium),Cue Tips,Kamui,10-layer pigskin leather cue tip for maximum spin control.,"₱ 1,200.00",₱ 750.00,80,25,Precision Billiards PH,In Stock,Piece
+BIL-TIP-002,Moori Layered Leather Tip (Soft),Cue Tips,Moori,Premium Japanese 9-layer leather tip for smooth feedback.,₱ 950.00,₱ 580.00,6,15,Precision Billiards PH,Low Stock,Piece
+BIL-CAS-001,Hard Shell 2x4 Cue Case,Cue Cases,Viper,Heavy-duty vinyl cue case holding 2 butts and 4 shafts with accessory pockets.,"₱ 4,800.00","₱ 3,000.00",18,8,CueCraft Distributors Inc.,In Stock,Piece
+BIL-CAS-002,Leatherette Oval 1x1 Cue Sleeve,Cue Cases,Action Cues,Compact padded carrying case for single 2-piece cue.,"₱ 1,200.00",₱ 700.00,2,10,Metro Sports Supplies,Low Stock,Piece
+BIL-BAL-001,Super Aramith Pro Tournament Ball Set,Pool Balls,Aramith,Phenolic resin 2-1/4 inch regulation size tournament pool balls.,"₱ 18,500.00","₱ 12,800.00",12,5,Global Table Sports Co.,In Stock,Set
+BIL-BAL-002,Standard Economy Pool Ball Set,Pool Balls,Crown Billiards,Polyester resin ball set for casual play and home pool tables.,"₱ 3,200.00","₱ 1,900.00",0,8,Metro Sports Supplies,Out of Stock,Set
+BIL-BAL-003,Aramith Pro Cup Red Dot Cue Ball,Pool Balls,Aramith,6-red-dot training cue ball for visualizing spin and rebound angles.,"₱ 2,200.00","₱ 1,400.00",35,12,Global Table Sports Co.,In Stock,Piece
+BIL-CHK-001,Master Blue Chalk (Box of 12),Chalk,Master,Traditional blue billiard chalk box containing 12 cubes.,₱ 450.00,₱ 260.00,150,30,Precision Billiards PH,In Stock,Box
+BIL-CHK-002,Taom V10 Professional Green Chalk,Chalk,Taom,High-tech non-residue chalk for maximum grip and zero miscues.,"₱ 1,450.00",₱ 920.00,5,10,Precision Billiards PH,Low Stock,Piece
+BIL-SFT-001,Revo 12.4mm Carbon Composite Shaft,Cue Shafts,Predator Cue Co.,Uni-Loc joint carbon shaft with radial consistency technology.,"₱ 28,000.00","₱ 19,500.00",8,4,CueCraft Distributors Inc.,In Stock,Piece
+BIL-SFT-002,Standard Maple Shaft 5/16x18 Joint,Cue Shafts,Players Cues,Solid hard rock maple replacement shaft with pro taper.,"₱ 4,200.00","₱ 2,500.00",14,6,Metro Sports Supplies,In Stock,Piece
+BIL-BUT-001,Uniloc Custom Inlaid Wood Butt,Cue Butts,Lucasi Custom,Exotic cocobolo wood cue butt with quick-release joint pin.,"₱ 16,500.00","₱ 10,500.00",3,5,CueCraft Distributors Inc.,Low Stock,Piece
+BIL-BUT-002,Matte Black Rubber Grip Cue Butt,Cue Butts,Action Cues,Textured rubber grip replacement cue butt with weight bolt system.,"₱ 5,500.00","₱ 3,400.00",0,5,Metro Sports Supplies,Out of Stock,Piece
+BIL-TBL-001,Royal Slate 9ft Tournament Pool Table,Pool Tables,Brunswick,3-piece 1-inch slate pool table with solid hardwood frame and drop pockets.,"₱ 285,000.00","₱ 198,000.00",3,2,Global Table Sports Co.,In Stock,Unit
+BIL-TBL-002,Compact 7ft Slate-Bed Pool Table,Pool Tables,Olhausen,Residential 7-foot pool table with solid oak finish and synthetic pockets.,"₱ 165,000.00","₱ 115,000.00",1,2,Global Table Sports Co.,Low Stock,Unit
+BIL-FLT-001,Simonis 860 Worsted Cloth 9ft (Tournament Blue),Table Cloth/Felt,Iwan Simonis,High-speed napless worsted wool blend cloth for 9-foot billiard tables.,"₱ 19,500.00","₱ 13,200.00",15,5,Global Table Sports Co.,In Stock,Roll
+BIL-FLT-002,Championship Teflon Coated Felt 8ft (Green),Table Cloth/Felt,Championship,Spill-resistant wool/nylon blended felt for home pool tables.,"₱ 8,500.00","₱ 5,400.00",4,6,Precision Billiards PH,Low Stock,Roll
+BIL-RCK-001,"Solid Oak Triangle Ball Rack 2-1/4""",Ball Racks,Delta 13,Precision hardwood 8-ball triangle rack reinforced corners.,"₱ 1,450.00",₱ 850.00,22,8,Metro Sports Supplies,In Stock,Piece
+BIL-RCK-002,Magic Ball Rack Pro Sheet (9 & 10 Ball),Ball Racks,Magic Ball Rack,"Ultra-thin film rack template for tight, consistent ball racking.",₱ 850.00,₱ 420.00,45,15,Precision Billiards PH,In Stock,Pack
+BIL-RCK-003,Mahogany Diamond 9-Ball Rack,Ball Racks,Action Cues,Solid mahogany wood diamond-shaped rack for 9-ball setup.,"₱ 1,250.00",₱ 720.00,0,5,Metro Sports Supplies,Out of Stock,Piece
+BIL-BRG-001,Brass Spider Bridge Head with Stick,Bridges/Rests,Silver Cup,High-clearance brass spider rest head attached to 57-inch wooden bridge stick.,"₱ 1,850.00","₱ 1,100.00",16,6,Metro Sports Supplies,In Stock,Piece
+BIL-BRG-002,Moosehead Slip-On Bridge Head,Bridges/Rests,Viper,Portable molded plastic bridge head fits onto any standard cue shaft.,₱ 350.00,₱ 180.00,3,10,Precision Billiards PH,Low Stock,Piece
+BIL-GLV-001,Predator Second Skin Billiard Glove (L),Gloves,Predator Cue Co.,Ultra-slick breathable mesh 3-finger glove for friction-free cueing.,"₱ 1,650.00",₱ 980.00,30,10,CueCraft Distributors Inc.,In Stock,Piece
+BIL-GLV-002,Cuetec Microfiber Lycra Glove (M),Gloves,Cuetec,Flexible lycra billiard glove with non-slip palm pad.,₱ 950.00,₱ 550.00,5,12,Precision Billiards PH,Low Stock,Piece
+BIL-CLN-001,Aramith Ball Cleaner & Restorer Set,Cleaning Equipment,Aramith,Specialized cleaning solution and micro-fiber cloth set for phenolic balls.,"₱ 1,850.00","₱ 1,150.00",20,8,Global Table Sports Co.,In Stock,Set
+BIL-CLN-002,Cue Doctor Shaft Conditioner & Burnisher,Cleaning Equipment,Cue Doctor,Micro-abrasive pad and wax conditioner for smoothing wood cue shafts.,₱ 750.00,₱ 420.00,0,10,Precision Billiards PH,Out of Stock,Piece
+BIL-ACC-001,Heavy-Duty Fitted Table Cover 9ft,Table Accessories,Covercraft,Waterproof leatherette protective cover with fitted elastic corners.,"₱ 3,200.00","₱ 1,950.00",14,5,Global Table Sports Co.,In Stock,Piece
+BIL-ACC-002,Horsehair Table Brush 10.5-Inch,Table Accessories,Master,Soft natural horsehair brush for dusting felt without damaging fibers.,₱ 850.00,₱ 480.00,28,10,Metro Sports Supplies,In Stock,Piece
+BIL-ACC-003,Wall-Mounted 6-Cue Hardwood Rack,Table Accessories,Viper,Two-piece wall rack for organizing and storing up to 6 pool cues safely.,"₱ 2,450.00","₱ 1,450.00",7,5,Metro Sports Supplies,In Stock,Piece
