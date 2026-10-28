@@ -264,7 +264,7 @@ Object.assign(ACTS, {
 SUBMIT.chat = () => {
   const text = (FORM.msg || '').trim(); if (!text) return;
   const t = threadById(getU('chat_t')); if (!t) return;
-  sendMessage(t.id, S.role, text, () => { if (/\/chat/.test(location.hash)) render(); });
+  sendMessage(t.id, S.role === 'supplier' ? 'supplier' : 'dist', text, () => { if (/\/chat/.test(location.hash)) render(); });
   FORM.msg = ''; render(); const i = $('#f_msg'); if (i) i.focus();
 };
 
