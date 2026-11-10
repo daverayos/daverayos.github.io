@@ -102,13 +102,13 @@ function buildOrders(P) {
   ];
 }
 function buildReturns() {
-  const mk = (id, dist, order, sku, qty, cond, status, at, reason, note) => ({ id, dist, order, sku, qty, cond, status, at: ts(at), reason, note: note || '', photos: cond === 'damaged' ? 2 : 0 });
+  const mk = (id, dist, order, sku, qty, cond, status, at, reason, note) => ({ id, dist, order, sku, qty, cond, status, at: ts(at), reason, note: note || '', photos: cond === 'damaged' ? 2 : 1, video: { name: `unboxing-${id}.mp4`, size: 60e6 + (parseInt(id.slice(4), 10) % 7) * 11e6, len: `1:${String(20 + (parseInt(id.slice(4), 10) % 6) * 7).padStart(2, '0')}` } });
   return [
-    mk('RMA-031', 'roberto', 'BM-2610-0146', 'BIL-RCK-001', 2, 'good', 'Submitted', '2026-10-28T07:50', 'Ordered more than needed. Items are unused and in the original packaging.'),
-    mk('RMA-030', 'darren', 'BM-2610-0145', 'BIL-CHK-002', 3, 'damaged', 'Submitted', '2026-10-27T15:10', 'Packaging was crushed in transit and the chalk cubes are broken.'),
-    mk('RMA-029', 'roberto', 'BM-2610-0142', 'BIL-GLV-002', 1, 'damaged', 'Separate handling', '2026-10-23T11:05', 'Palm pad came loose after first use.', 'Defective stitching. Sent to the supplier warranty claim.'),
-    mk('RMA-028', 'darren', 'BM-2610-0145', 'BIL-RCK-002', 5, 'good', 'Restocked', '2026-10-26T17:20', 'Wrong rack template size ordered.', 'Inspected: sealed packs. Restocked.'),
-    mk('RMA-027', 'roberto', 'BM-2610-0146', 'BIL-CUE-003', 1, 'damaged', 'Rejected', '2026-10-26T14:00', 'House cue has a slight warp.', 'Photos show normal wear within tolerance. Rejected.')
+    mk('RMA-031', 'roberto', 'BM-2610-0146', 'BIL-RCK-001', 2, 'good', 'Submitted', '2026-10-28T07:50', 'Wrong item. We received the wrong triangle rack template size. Items are unused and in the original packaging.'),
+    mk('RMA-030', 'darren', 'BM-2610-0145', 'BIL-CHK-002', 3, 'damaged', 'Submitted', '2026-10-27T15:10', 'Damaged. Packaging was crushed in transit and the chalk cubes are broken.'),
+    mk('RMA-029', 'roberto', 'BM-2610-0142', 'BIL-GLV-002', 1, 'damaged', 'Separate handling', '2026-10-23T11:05', 'Defective. Palm pad came loose after first use.', 'Defective stitching. Sent to the supplier warranty claim.'),
+    mk('RMA-028', 'darren', 'BM-2610-0145', 'BIL-RCK-002', 5, 'good', 'Restocked', '2026-10-26T17:20', 'Wrong item. Received the wrong rack template size.', 'Inspected: sealed packs. Restocked.'),
+    mk('RMA-027', 'roberto', 'BM-2610-0146', 'BIL-CUE-003', 1, 'damaged', 'Rejected', '2026-10-26T14:00', 'Damaged. House cue has a slight warp.', 'Photos show normal wear within tolerance. Rejected.')
   ];
 }
 function buildThreads() {
@@ -119,7 +119,7 @@ function buildThreads() {
       m('supplier', '2026-10-28T09:31', 'Good morning Roberto! Yes, 25 Apex Pro cues are on hand. Your order is queued for processing.'),
       m('dist', '2026-10-28T09:36', 'Understood, thank you. Please prioritize the Apex Pro cues. We are almost out.', false)] },
     { id: 't2', dist: 'roberto', ctx: 'BM-2610-0146', msgs: [
-      m('dist', '2026-10-28T07:52', 'Submitted RMA-031 for 2 triangle racks that we ordered in excess.'),
+      m('dist', '2026-10-28T07:52', 'Submitted RMA-031 for 2 triangle racks that arrived in the wrong size.'),
       m('supplier', '2026-10-28T08:20', 'Thanks Roberto. We will review RMA-031 today.', false)] },
     { id: 't3', dist: 'victoria', ctx: 'BM-2610-0151', msgs: [
       m('dist', '2026-10-28T08:55', 'Can we add 10 more boxes of chalk to this order?'),
@@ -174,15 +174,126 @@ function buildSales(P) {
 }
 
 /* ---------- Fresh state ---------- */
+/* General chats: ordinary supplier-distributor conversation, kept apart from order and return chats */
+const GENERAL_CHAT = {
+  roberto: [
+    ['d', '2026-08-07T15:30', 'Received BM-2608-0137 this afternoon. Everything is complete, thank you!'],
+    ['s', '2026-08-08T09:10', 'Glad to hear it, Roberto. Let us know if you need anything ahead of the September rush.'],
+    ['d', '2026-09-14T14:20', 'BM-2609-0139 arrived. Quick question: will you restock the Apex Pro cues before the end of the month?'],
+    ['s', '2026-09-14T16:05', 'Yes, a new batch is due in the last week of September. I will message you once it lands.'],
+    ['s', '2026-10-01T10:00', 'The new Apex Pro cue batch is in. Want us to reserve some for your next order?'],
+    ['d', '2026-10-01T10:25', 'Great news. I will include them in my next order.'],
+    ['d', '2026-10-17T17:00', 'BM-2610-0142 is here. One of the gloves has a loose palm pad, so I will file a return.'],
+    ['s', '2026-10-17T17:20', 'Sorry about that. Please submit it under Orders & Returns with photos and we will inspect it.'],
+    ['s', '2026-10-23T15:00', 'We reviewed RMA-029. It is a stitching defect, so we sent it to the supplier warranty claim.'],
+    ['d', '2026-10-23T15:12', 'Understood, thank you for the quick turnaround.'],
+    ['d', '2026-10-26T14:30', 'BM-2610-0146 arrived. The triangle racks are the wrong template size, so I will send a return request for two.'],
+    ['s', '2026-10-26T14:40', 'Noted. Please make sure they are unused and in the original packaging.'],
+    ['s', '2026-10-26T17:30', 'About RMA-027: the photos show normal wear, so we could not approve it. Happy to talk it through if you disagree.'],
+    ['d', '2026-10-26T17:45', 'Okay, no problem. Thanks for explaining.'],
+    ['d', '2026-10-28T14:00', 'Hi! Is there a price list update coming for the November chalk and tips?'],
+    ['s', '2026-10-28T15:20', 'The updated price list goes out on November 1. Chalk prices stay the same and tips change slightly.', false]
+  ],
+  leonardo: [
+    ['d', '2026-08-30T16:00', 'BM-2608-0138 arrived, thank you.'],
+    ['s', '2026-08-31T09:00', 'You are welcome. Reach out any time you need a quote on tables.'],
+    ['d', '2026-10-20T11:00', 'Do you ship tables to Cebu?'],
+    ['s', '2026-10-20T11:30', 'Yes, tables ship by freight. Send us the model and we will quote the delivery.']
+  ],
+  georgia: [
+    ['d', '2026-10-02T15:00', 'Received BM-2609-0140. The tips and chalk are all good.'],
+    ['s', '2026-10-02T15:40', 'Great. Chalk has been selling fast this month, so order early if you need more.'],
+    ['d', '2026-10-24T09:30', 'Planning ahead for a weekend event. Do you offer a bulk discount on chalk?'],
+    ['s', '2026-10-24T10:10', 'For 50 boxes or more we can discuss a discount. Send us the quantity you need.']
+  ],
+  victoria: [
+    ['d', '2026-10-11T14:10', 'BM-2610-0141 arrived, thank you!'],
+    ['s', '2026-10-11T14:35', 'Great! Let us know how the butterfly cue case sells.'],
+    ['d', '2026-10-27T09:00', 'Do you have chalk in the 12-box pack?'],
+    ['s', '2026-10-27T09:40', 'We stock the 12-box pack. Place a separate order and we will prepare it.']
+  ],
+  jimmy: [
+    ['d', '2026-10-22T09:50', 'I would like to change the quantity on my order. Is it still possible?'],
+    ['s', '2026-10-22T10:20', 'The order is still being prepared, so the easiest way is to cancel it and place a new one.'],
+    ['d', '2026-10-22T11:30', 'Done. I will place a new order with 6 instead.'],
+    ['s', '2026-10-22T11:45', 'Thanks Jimmy, we will watch for it.']
+  ],
+  denmark: [
+    ['d', '2026-10-23T16:00', 'BM-2610-0143 received. The flat cue tips are perfect.'],
+    ['s', '2026-10-23T16:30', 'Glad to hear it.']
+  ],
+  darren: [
+    ['d', '2026-10-25T13:00', 'Got BM-2610-0145 today. The rack template size is wrong. Can I return them?'],
+    ['s', '2026-10-25T13:25', 'Yes, please file a return request and we will inspect them.'],
+    ['s', '2026-10-26T21:00', 'RMA-028 is approved and restocked. Thanks for sending sealed packs.'],
+    ['d', '2026-10-26T21:10', 'Thank you! The chalk in that order was crushed though, so I will send another request.'],
+    ['d', '2026-10-28T16:50', 'Photos for the chalk are attached to my return request. Please take a look.', false]
+  ],
+  olivia: [
+    ['d', '2026-10-27T16:00', 'Hi, when will BM-2610-0150 be processed? We are opening a new hall soon.'],
+    ['s', '2026-10-28T09:15', 'It is in the queue for today, Olivia. I will update you once it is packed.']
+  ]
+};
+function withGeneralChats(threads) {
+  Object.entries(GENERAL_CHAT).forEach(([dist, rows]) => {
+    let g = threads.find(x => x.dist === dist && x.ctx === 'General');
+    if (!g) { g = { id: 'g-' + dist, dist, ctx: 'General', msgs: [] }; threads.push(g); }
+    rows.forEach(([who, at, text, read = true]) => g.msgs.push({ from: who === 'd' ? 'dist' : 'supplier', at: ts(at), text, read }));
+  });
+  return threads;
+}
+/* A finished order or return posts a status into its own chat and a one-line entry into the distributor's General chat. */
+const isRetCtx = (c) => /^RMA-/.test(c);
+function closeChat(threads, distId, ctx, label, at, seen, detail) {
+  const t = threads.find(x => x.dist === distId && x.ctx === ctx);
+  if (t) { t.msgs.push({ from: 'system', at, text: label, detail, read: true }); t.closed = label; t.seen = { supplier: !!seen, distributor: !!seen }; }
+  let g = threads.find(x => x.dist === distId && x.ctx === 'General');
+  if (!g) { g = { id: 'g-' + distId, dist: distId, ctx: 'General', msgs: [] }; threads.push(g); }
+  g.msgs.push({ from: 'system', kind: 'status', at, label, ctx, detail, text: (isRetCtx(ctx) ? 'Return ' : 'Order ') + ctx + ' \u00b7 ' + label, ref: t ? t.id : null, read: true });
+}
+/* every return request has its own chat, like every order; finished ones start already closed */
+function withClosedChats(threads, returns, orders) {
+  returns.forEach(r => threads.push({ id: 'th-' + r.id, dist: r.dist, ctx: r.id, msgs: [] }));
+  const items = [];
+  orders.forEach(o => { if (o.status === 'Delivered' || o.status === 'Cancelled') items.push([o.dist, o.id, o.status, o.history[o.history.length - 1].at]); });
+  returns.forEach(r => { if (r.status !== 'Submitted') items.push([r.dist, r.id, r.status === 'Rejected' ? 'Rejected' : 'Approved', r.at + 3 * 3600e3, r.status === 'Rejected' ? r.note : '']); });
+  withGeneralChats(threads);
+  items.sort((x, y) => x[3] - y[3]).forEach(([dist, ctx, label, at, detail]) => closeChat(threads, dist, ctx, label, at, true, detail));
+  threads.filter(t => t.ctx === 'General').forEach(t => t.msgs.sort((a, b) => a.at - b.at)); // status lines and chat in time order
+  return threads;
+}
+/* dummy payment methods, statuses and transactions for the sample orders */
+function withPayments(orders) {
+  const fixed = { 'BM-2610-0152': ['cod'], 'BM-2610-0151': ['bank'], 'BM-2610-0150': ['cod'], 'BM-2610-0149': ['ewallet'], 'BM-2610-0148': ['bank', 'submitted'], 'BM-2610-0147': ['bank', 'submitted'], 'BM-2610-0146': ['ewallet'], 'BM-2610-0142': ['bank'], 'BM-2609-0139': ['cod'], 'BM-2608-0137': ['ewallet'] };
+  const cycle = ['cod', 'ewallet', 'bank'], wallets = ['GCash', 'Maya', 'GrabPay'], ymdOf = (at) => { const x = new Date(at); return x.getFullYear() + String(x.getMonth() + 1).padStart(2, '0') + String(x.getDate()).padStart(2, '0'); };
+  let seq = 0;
+  [...orders].reverse().forEach((o, i) => {
+    const [method = cycle[i % 3], force] = fixed[o.id] || [], total = Math.round(o.items.reduce((s, x) => s + x.qty * x.price, 0) * 1.12 * 100) / 100;
+    const delivered = o.history.find(h => h.status === 'Delivered'), tx = [];
+    const add = (at, detail, status, m = method) => tx.push({ id: 'TXN-' + ymdOf(at) + '-' + String(++seq).padStart(4, '0'), at, method: m, detail, amount: total, status });
+    let status;
+    if (o.status === 'Cancelled') status = 'void';
+    else if (o.status === 'Delivered') {
+      status = 'paid';
+      if (method === 'cod') add(delivered.at, 'Cash on delivery', 'Success');
+      else if (method === 'ewallet') add(o.placed + 45 * 60e3, wallets[i % 3] + ' \u00b7 0917 *** ' + (4200 + i * 37), 'Success');
+      else { if (o.id === 'BM-2610-0142') add(o.placed + 20 * 60e3, 'Card ending 0002', 'Failed'); add(o.placed + 90 * 60e3, i % 2 ? 'Card ending 4242' : 'Bank transfer \u00b7 ref 77' + (4010 + i) + '3', 'Success'); }
+    } else if (force === 'submitted') { status = 'submitted'; add(o.placed + 2 * 3600e3, 'Bank transfer \u00b7 ref 55' + (1200 + i * 7) + '8', 'Pending'); }
+    else status = method === 'cod' ? 'cod' : 'unpaid';
+    o.pay = { method, status, txns: tx };
+  });
+  return orders;
+}
 function seedState() {
   const products = loadProducts();
+  const orders = withPayments(buildOrders(products)), returns = buildReturns();
   return {
     role: null,
     products,
     shop: buildShopStock(products),
-    orders: buildOrders(products),
-    returns: buildReturns(),
-    threads: buildThreads(),
+    orders,
+    returns,
+    threads: withClosedChats(buildThreads(), returns, orders),
     notifs: buildNotifs(),
     cart: [],
     sales: buildSales(products),

@@ -43,6 +43,7 @@ const ICONS = {
   home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
   trend: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  play: '<polygon points="6 4 20 12 6 20 6 4"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
   eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
@@ -79,7 +80,9 @@ const ORDER_CLS = { New: 'new', Processing: 'processing', Shipped: 'shipped', De
 const orderBadge = (s) => badge(ORDER_CLS[s], s);
 const RET_CLS = { Submitted: 'submitted', Restocked: 'restocked', 'Separate handling': 'sep', Rejected: 'rejected' };
 const returnBadge = (s) => badge(RET_CLS[s], s);
-const condLabel = (c) => c === 'good' ? 'Good condition' : 'Damaged or defective';
+const RETURN_REASONS = ['Wrong item', 'Damaged', 'Defective'];
+const retKind = (r) => r.reason.split('. ')[0];   // the reason chosen on the request form
+const fmtMB = (b) => (b / 1048576 >= 10 ? Math.round(b / 1048576) : (b / 1048576).toFixed(1)) + ' MB';
 const avatar = (name, cls = '') => `<span class="av ${cls}" aria-hidden="true">${esc(initials(name))}</span>`;
 
 /* ---------- Charts ---------- */
@@ -118,7 +121,7 @@ const sw = (key, on, label, desc) => `<div class="pref"><div><b>${label}</b>${de
 
 /* ---------- Overlays: centered modal on desktop, bottom sheet on phones ---------- */
 let OV = null;
-const PAGE_FORM_KEYS = /^(rsku|rqty|rcond|rreason|rnote|pdq|sname|semail|scompany|saddr|slang|msg|email|pw)$/;   // page-level form values survive opening and closing an overlay
+const PAGE_FORM_KEYS = /^(rsku|rqty|rreason|paym|rnote|pdq|sname|semail|scompany|saddr|slang|msg|email|pw)$/;   // page-level form values survive opening and closing an overlay
 function openOv(fn, o = {}) { OV = { fn, kind: o.kind || 'modal', size: o.size || '', back: o.back }; paintOv(true); document.body.classList.add('lock'); }
 const keepBack = () => (OV ? OV.back : undefined);
 function paintOv(first) {

@@ -71,12 +71,15 @@ function advanceOrder(id) {
     o.items.forEach(i => { if (m[i.sku]) m[i.sku].qty += i.qty; else m[i.sku] = { qty: i.qty, rop: Math.max(2, Math.round(prod(i.sku).rop * 0.7)) }; });
   }
   o.status = next; o.history.push({ status: next, at: now() });
+  if (next === 'Delivered') { closeChat(S.threads, o.dist, o.id, 'Delivered', now(), false); if (o.pay.status === 'cod') markPaid(o, 'Cash collected on delivery'); }
   if (o.dist === ME_DIST) pushNotif('distributor', 'order', `Order ${o.id} ${next === 'Processing' ? 'is being processed' : next.toLowerCase()}`, next === 'Shipped' ? 'Expected delivery in 1 to 2 days.' : next === 'Delivered' ? 'Your shop stock was updated.' : 'We are preparing your items.', '#/d/order/' + o.id);
   return { ok: true, msg: `${o.id} is now ${next}.` };
 }
 function cancelOrder(id, reason, by) {
   const o = orderById(id);
   o.status = 'Cancelled'; o.reason = reason; o.history.push({ status: 'Cancelled', at: now() });
+  closeChat(S.threads, o.dist, o.id, 'Cancelled', now(), false);
+  o.pay.status = ['paid', 'submitted'].includes(o.pay.status) ? 'refund' : 'void';
   if (by === 'supplier' && o.dist === ME_DIST) pushNotif('distributor', 'order', `Order ${o.id} was cancelled`, reason, '#/d/order/' + o.id);
   if (by === 'distributor') pushNotif('supplier', 'order', `Order ${o.id} was cancelled`, `${dist(o.dist).name}: ${reason}`, '#/s/orders/' + o.id);
 }
@@ -85,8 +88,9 @@ function nextOrderId() {
   const seq = Math.max(...S.orders.map(o => parseInt(o.id.slice(-4), 10))) + 1;
   return `BM-${yymm}-${String(seq).padStart(4, '0')}`;
 }
-function placeOrder(items) {
-  const o = { id: nextOrderId(), dist: ME_DIST, placed: now(), status: 'New', items: items.map(i => ({ sku: i.sku, qty: i.qty, price: prod(i.sku).price })), history: [{ status: 'New', at: now() }] };
+function placeOrder(items, method) {
+  method = method || S.profile.distributor.defaultPay || 'cod';
+  const o = { id: nextOrderId(), dist: ME_DIST, placed: now(), status: 'New', items: items.map(i => ({ sku: i.sku, qty: i.qty, price: prod(i.sku).price })), history: [{ status: 'New', at: now() }], pay: { method, status: method === 'cod' ? 'cod' : 'unpaid', txns: [] } };
   S.orders.unshift(o);
   pushNotif('supplier', 'order', 'New order ' + o.id, `${dist(ME_DIST).name} placed an order for ${o.items.length} product${o.items.length > 1 ? 's' : ''}.`, '#/s/orders/' + o.id);
   return o;
@@ -122,18 +126,22 @@ function suggestQty(sku) {
 /* ---------- Returns ---------- */
 function submitReturn(d) {
   const seq = Math.max(...S.returns.map(r => parseInt(r.id.slice(4), 10))) + 1;
-  const r = { id: 'RMA-' + String(seq).padStart(3, '0'), dist: ME_DIST, order: d.order, sku: d.sku, qty: d.qty, cond: d.cond, status: 'Submitted', at: now(), reason: d.reason, note: '', photos: d.photos };
+  const r = { id: 'RMA-' + String(seq).padStart(3, '0'), dist: ME_DIST, order: d.order, sku: d.sku, qty: d.qty, status: 'Submitted', at: now(), reason: d.reason, note: '', photos: d.photos.length, photoUrls: d.photos, video: d.video };
   S.returns.unshift(r);
+  ensureThread(ME_DIST, r.id);
   pushNotif('supplier', 'return', `Return ${r.id} submitted`, `${dist(ME_DIST).name} wants to return ${r.qty} × ${prod(r.sku).name}.`, '#/s/returns/' + r.id);
   return r;
 }
+/* decision: 'good' (accept and add to stock), 'damaged' (accept, not in good condition, no restock) or 'reject' (note = reason) */
 function processReturn(id, decision, note) {
   const r = returnById(id), p = prod(r.sku);
   if (decision === 'good') { p.stock += r.qty; r.status = 'Restocked'; }
   else if (decision === 'damaged') r.status = 'Separate handling';
   else r.status = 'Rejected';
   r.note = note || ''; r.done = now();
-  if (r.dist === ME_DIST) pushNotif('distributor', 'return', `Return ${r.id} ${r.status === 'Restocked' ? 'was restocked' : r.status === 'Rejected' ? 'was rejected' : 'is handled separately'}`, r.note || 'See the return for details.', '#/d/orders/returns');
+  const rej = r.status === 'Rejected';
+  closeChat(S.threads, r.dist, r.id, rej ? 'Rejected' : 'Approved', now(), false, rej ? r.note : '');
+  if (r.dist === ME_DIST) pushNotif('distributor', 'return', `Return ${r.id} ${r.status === 'Restocked' ? 'was approved and restocked' : rej ? 'was rejected' : 'was approved (handled separately)'}`, rej ? `Reason: ${r.note}. Please submit a new request.` : (r.note || 'See the return for details.'), '#/d/orders/returns');
   return r;
 }
 
@@ -144,6 +152,7 @@ function ensureThread(distId, ctx) {
   return t;
 }
 function markThreadRead(t, role) {
+  if (t.closed) t.seen[role] = true; // a finished chat leaves the list once its owner has viewed it
   t.msgs.forEach(m => { if (m.from === (role === 'supplier' ? 'dist' : 'supplier')) m.read = true; });
 }
 const lastMsg = (t) => t.msgs[t.msgs.length - 1];

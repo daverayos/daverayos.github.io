@@ -25,6 +25,7 @@ PAGES.s.dashboard = () => {
     ${kpi({ label: 'Returns', icon: 'undo', val: `${reviewCount()} to review`, sub: `${plural(S.returns.length, 'request')} in total`, href: '#/s/returns' })}
     ${kpi({ label: 'Messages', icon: 'chat', tone: 'dk', val: `${unreadChat('supplier')} unread`, sub: `${plural(convs, 'active conversation')}`, href: '#/s/chat' })}
   </div>
+  ${paymentsCard()}
   <div class="grid-2">
     <section class="card gold" aria-label="Wholesale order trend">
       <div class="card-head"><div><h2>Wholesale order trend</h2><p>Order value per day, in thousands of pesos</p></div>${rangeSeg('dash_range', range)}</div>
@@ -165,7 +166,7 @@ PAGES.s.orders = (r) => {
   return `${pageHead('Orders', 'Wholesale orders from distributors. Status moves New, Processing, Shipped, Delivered.')}
   ${dId ? `<div class="row" style="margin-bottom:12px"><span class="badge b-neutral">Distributor: ${esc(dist(dId).name)}</span><button class="link small" data-act="ord-clear">Clear</button></div>` : ''}
   ${tabsRow('ord_tab', tabs, tab)}
-  <div class="card flush">${list.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th>Order ID</th><th>Distributor</th><th class="num">Items</th><th class="num">Total</th><th>Status</th><th>Placed</th><th class="right">Action</th></tr></thead><tbody>${list.map(o => `<tr class="click" data-act="go" data-to="#/s/orders/${o.id}"><td class="first"><b>${o.id}</b></td><td data-label="Distributor"><b>${esc(dist(o.dist).name)}</b><div class="muted small">${esc(dist(o.dist).shop)}</div></td><td data-label="Items" class="num">${o.items.length}</td><td data-label="Total" class="num"><b>${peso(orderTotal(o))}</b></td><td data-label="Status">${orderBadge(o.status)}</td><td data-label="Placed">${fmtDT(o.placed)}</td><td data-label=""><div class="acts"><button class="btn sm">View</button></div></td></tr>`).join('')}</tbody></table></div>` : empty('list', 'No orders here', 'There are no orders with this status yet.')}</div>`;
+  <div class="card flush">${list.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th>Order ID</th><th>Distributor</th><th class="num">Items</th><th class="num">Total</th><th>Status</th><th class="hide-t">Payment</th><th>Placed</th><th class="right">Action</th></tr></thead><tbody>${list.map(o => `<tr class="click" data-act="go" data-to="#/s/orders/${o.id}"><td class="first"><b>${o.id}</b></td><td data-label="Distributor"><b>${esc(dist(o.dist).name)}</b><div class="muted small">${esc(dist(o.dist).shop)}</div></td><td data-label="Items" class="num">${o.items.length}</td><td data-label="Total" class="num"><b>${peso(orderTotal(o))}</b></td><td data-label="Status">${orderBadge(o.status)}</td><td data-label="Payment" class="hide-t">${payBadge(o)}<div class="muted small">${PAY[o.pay.method].label}</div></td><td data-label="Placed">${fmtDT(o.placed)}</td><td data-label=""><div class="acts"><button class="btn sm">View</button></div></td></tr>`).join('')}</tbody></table></div>` : empty('list', 'No orders here', 'There are no orders with this status yet.')}</div>`;
 };
 ACTS['ord-clear'] = () => { S.ui.ord_dist = ''; render(); };
 function orderDrawer(id) {
@@ -179,6 +180,7 @@ function orderDrawer(id) {
     <div class="row">${avatar(d.name)}<div class="grow"><b>${esc(d.name)}</b><div class="muted small">${esc(d.shop)} · ${esc(d.city)}</div></div><button class="btn sm" data-act="chat-order" data-id="${o.id}">${icon('chat', 15)} Message</button></div>
     <div class="sec-title">Products</div><div class="line-items">${o.items.map(i => { const p = prod(i.sku), short = ['New', 'Processing'].includes(o.status) && p.stock < i.qty; return `<div class="li"><div class="grow"><b class="title-sm">${esc(p.name)}</b><div class="muted small">${i.qty} × ${peso(i.price)}${['New', 'Processing'].includes(o.status) ? ` · ${short ? `<span style="color:var(--bad);font-weight:700">Short: only ${p.stock} on hand</span>` : `${p.stock} on hand`}` : ''}</div></div><b>${peso(i.qty * i.price)}</b></div>`; }).join('')}</div>
     <div class="totals"><div><span>Subtotal</span><span>${peso(orderSub(o))}</span></div><div><span>VAT (12%)</span><span>${peso(orderVat(o))}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div>
+    <div style="margin-top:18px">${paymentCard(o, 'supplier')}</div>
     <div class="sec-title">Status history</div><ul class="timeline">${[...o.history].reverse().map(h => `<li><b>${h.status}</b><span class="muted small">${fmtDT(h.at)}</span></li>`).join('')}</ul>
   </div>${nxt || ['New', 'Processing'].includes(o.status) ? `<div class="panel-foot">${['New', 'Processing'].includes(o.status) ? `<button class="btn" data-act="ord-cancel-ask" data-id="${o.id}">Cancel order</button>` : ''}${nxt ? `<button class="btn primary" data-act="ord-adv" data-id="${o.id}">${NEXT_LABEL[o.status]}</button>` : ''}</div>` : ''}`;
 }
@@ -213,47 +215,86 @@ PAGES.s.returns = (r) => {
   const list = S.returns.filter(x => tab === 'All' || x.status === tab);
   return `${pageHead('Returns', 'Review return requests. Submitting a request never restocks items. Restocking happens only when you process a request as good condition.')}
   ${tabsRow('ret_tab', RET_TABS.map(t => [t, t, t === 'All' ? S.returns.length : S.returns.filter(x => x.status === t).length]), tab)}
-  <div class="card flush">${list.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th>Request</th><th>Distributor</th><th>Order</th><th>Product</th><th class="num">Qty</th><th>Reported condition</th><th>Status</th><th>Submitted</th><th class="right">Action</th></tr></thead><tbody>${list.map(x => `<tr class="click" data-act="go" data-to="#/s/returns/${x.id}"><td class="first"><b>${x.id}</b></td><td data-label="Distributor">${esc(dist(x.dist).name)}</td><td data-label="Order" class="sku">${x.order}</td><td data-label="Product">${esc(prod(x.sku).name)}</td><td data-label="Qty" class="num">${x.qty}</td><td data-label="Condition">${condLabel(x.cond)}</td><td data-label="Status">${returnBadge(x.status)}</td><td data-label="Submitted">${fmtDT(x.at)}</td><td data-label=""><div class="acts"><button class="btn sm ${x.status === 'Submitted' ? 'primary' : ''}">${x.status === 'Submitted' ? 'Review' : 'Open'}</button></div></td></tr>`).join('')}</tbody></table></div>` : empty('undo', 'No returns here', 'No return requests match this status.')}</div>`;
+  <div class="card flush">${list.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th>Request</th><th>Distributor</th><th>Order</th><th>Product</th><th class="num">Qty</th><th>Reason</th><th>Status</th><th>Submitted</th><th class="right">Action</th></tr></thead><tbody>${list.map(x => `<tr class="click" data-act="go" data-to="#/s/returns/${x.id}"><td class="first"><b>${x.id}</b></td><td data-label="Distributor">${esc(dist(x.dist).name)}</td><td data-label="Order" class="sku">${x.order}</td><td data-label="Product">${esc(prod(x.sku).name)}</td><td data-label="Qty" class="num">${x.qty}</td><td data-label="Condition">${esc(retKind(x))}</td><td data-label="Status">${returnBadge(x.status)}</td><td data-label="Submitted">${fmtDT(x.at)}</td><td data-label=""><div class="acts"><button class="btn sm ${x.status === 'Submitted' ? 'primary' : ''}">${x.status === 'Submitted' ? 'Review' : 'Open'}</button></div></td></tr>`).join('')}</tbody></table></div>` : empty('undo', 'No returns here', 'No return requests match this status.')}</div>`;
 };
+let RET_DEC_ERR = {};
 function openReturn(id, back) {
-  const r = returnById(id); FORM.dec = r.cond === 'good' ? 'good' : 'damaged'; FORM.note = r.note || '';
+  const r = returnById(id); FORM.dec = ''; FORM.cond = ''; FORM.note = r.status === 'Submitted' ? '' : (r.note || ''); RET_DEC_ERR = {};
   openOv(() => returnHtml(id), { size: 'wide', back });
 }
 function returnHtml(id) {
-  const r = returnById(id), p = prod(r.sku), d = dist(r.dist), isS = S.role === 'supplier', open = r.status === 'Submitted' && isS;
-  const opt = (v, t, s) => `<div class="radio-card ${FORM.dec === v ? 'on' : ''}" role="radio" aria-checked="${FORM.dec === v}" tabindex="0" data-act="fset" data-k="dec" data-v="${v}"><span>${icon(FORM.dec === v ? 'check' : 'plus', 18)}</span><div><b>${t}</b><span>${s}</span></div></div>`;
+  const r = returnById(id), p = prod(r.sku), d = dist(r.dist), isS = S.role === 'supplier', open = r.status === 'Submitted' && isS, e = RET_DEC_ERR;
+  const opt = (k, v, t, s) => `<div class="radio-card ${FORM[k] === v ? 'on' : ''}" role="radio" aria-checked="${FORM[k] === v}" tabindex="0" data-act="fset" data-k="${k}" data-v="${v}"><span>${icon(FORM[k] === v ? 'check' : 'plus', 18)}</span><div><b>${t}</b><span>${s}</span></div></div>`;
+  const photos = r.photoUrls && r.photoUrls.length ? r.photoUrls.map((u, i) => `<a class="photo" href="${u}" target="_blank" rel="noopener" title="Open photo ${i + 1}"><img src="${u}" alt="Photo ${i + 1} from distributor"></a>`).join('') : Array.from({ length: r.photos }, (_, i) => `<div class="photo" title="Simulated photo ${i + 1}">${icon('image', 26)}</div>`).join('');
+  const video = r.video ? (r.video.url ? `<video class="vid" src="${r.video.url}" controls preload="metadata"></video><div class="muted small" style="margin-top:6px">${esc(r.video.name)} · ${fmtMB(r.video.size)}</div>` : `<div class="vid placeholder" title="Simulated video">${icon('play', 30)}<span><b>${esc(r.video.name)}</b><br><span class="muted small">${r.video.len} · ${fmtMB(r.video.size)} · simulated</span></span></div>`) : '<p class="muted">No video.</p>';
+  const decision = open ? `<div class="sec-title">Decision</div>
+    ${opt('dec', 'accept', 'Accept return', 'The whole quantity is taken back. You then confirm its condition.')}${opt('dec', 'reject', 'Reject return', 'The distributor must submit a brand new request with the right details.')}
+    ${e.dec ? `<div class="alert err">${icon('alert')}<span>${esc(e.dec)}</span></div>` : ''}
+    ${FORM.dec === 'accept' ? `<div class="sec-title">Is the item in good condition?</div>${opt('cond', 'good', 'Yes, good condition', `Adds ${r.qty} back to ${esc(p.name)} stock (now ${p.stock}).`)}${opt('cond', 'bad', 'No, not in good condition', 'Not added to stock. Tracked separately for warranty or disposal.')}${e.cond ? `<div class="alert err">${icon('alert')}<span>${esc(e.cond)}</span></div>` : ''}${field('Processing note', `<textarea class="input" id="f_note" data-form="note" rows="2" placeholder="Optional note for the distributor">${esc(FORM.note || '')}</textarea>`)}` : ''}
+    ${FORM.dec === 'reject' ? `<div class="alert warn">${icon('alert')}<span>Rejecting is final for this request. The distributor will have to start a new return with a new video, photos and quantity.</span></div>${field('Reason for rejection', `<textarea class="input ${e.note ? 'bad' : ''}" id="f_note" data-form="note" rows="2" placeholder="For example: only 3 of the 4 items are damaged in the video">${esc(FORM.note || '')}</textarea>`, { err: e.note })}` : ''}`
+    : (r.status === 'Submitted' ? `<div class="alert info" style="margin-top:14px">${icon('info')}<span>Waiting for BilMagic to review the video and photos. Submitting a return never restocks the items.</span></div>` : `<div class="sec-title">${r.status === 'Rejected' ? 'Reason for rejection' : 'Processing note'}</div><p>${esc(r.note || 'No note added.')}</p>${r.status === 'Rejected' && !isS ? `<div class="alert info">${icon('info')}<span>You can submit a new request from the order page.</span></div>` : ''}`);
   return `${panelHead((isS ? 'Process return ' : 'Return ') + id, isS ? `${esc(d.name)} · order ${r.order}` : `Order ${r.order}`)}<div class="panel-body">
     <div class="row wrap" style="margin-bottom:8px">${returnBadge(r.status)}<span class="muted small">Submitted ${fmtDT(r.at)}</span></div>
-    <div class="list-row"><span class="tile">${catIcon(p.category)}</span><span class="grow"><b class="title-sm">${esc(p.name)}</b><span class="muted small" style="display:block">${r.qty} × ${peso(p.price)} · reported as ${condLabel(r.cond).toLowerCase()}</span></span></div>
+    <div class="list-row"><span class="tile">${catIcon(p.category)}</span><span class="grow"><b class="title-sm">${esc(p.name)}</b><span class="muted small" style="display:block">${r.qty} × ${peso(p.price)} · ${esc(retKind(r))}</span></span></div>
     <div class="sec-title">Reason for return</div><p>${esc(r.reason)}</p>
-    ${r.photos ? `<div class="sec-title">Photos from distributor</div><div class="photos">${Array.from({ length: r.photos }, (_, i) => `<div class="photo" title="Simulated photo ${i + 1}">${icon('image', 26)}</div>`).join('')}</div>` : ''}
-    ${open ? `<div class="sec-title">Decision</div>${opt('good', 'Good condition: restock', `Adds ${r.qty} back to ${esc(p.name)} stock (now ${p.stock}).`)}${opt('damaged', 'Damaged or defective: handle separately', 'Not restocked. Tracked for warranty or disposal.')}${opt('reject', 'Reject request', 'Items stay with the distributor.')}${field('Processing note', `<textarea class="input" id="f_note" data-form="note" rows="2" placeholder="Optional note for the distributor">${esc(FORM.note || '')}</textarea>`)}` : (r.status === 'Submitted' ? `<div class="alert info" style="margin-top:14px">${icon('info')}<span>Waiting for BilMagic to inspect the items. Submitting a return never restocks them.</span></div>` : `<div class="sec-title">Processing note</div><p>${esc(r.note || 'No note added.')}</p>`)}
-  </div>${open ? `<div class="panel-foot"><button class="btn" data-act="ov-close">Cancel</button><button class="btn primary" data-act="ret-do" data-id="${id}">Confirm decision</button></div>` : ''}`;
+    <div class="sec-title">Unboxing video</div>${video}
+    <div class="sec-title">Photos from distributor</div><div class="photos">${photos}</div>
+    ${decision}
+  </div><div class="panel-foot"><button class="btn" style="margin-right:auto" data-act="chat-return" data-id="${id}">${icon('chat', 16)} Chat</button>${open ? `<button class="btn" data-act="ov-close">Cancel</button><button class="btn ${FORM.dec === 'reject' ? 'danger' : 'primary'}" data-act="ret-do" data-id="${id}">${FORM.dec === 'reject' ? 'Reject return' : 'Confirm decision'}</button>` : ''}</div>`;
 }
-ACTS['ret-do'] = (d) => { const r = processReturn(d.id, FORM.dec, (FORM.note || '').trim()); ACTS['ov-close'](); toast(`${r.id}: ${r.status}`, 'ok'); render(); };
+ACTS['toggle-status'] = (d) => { const ms = $('.msgs'); KEEP_MSGS_TOP = ms ? ms.scrollTop : null; S.ui[d.key] = !S.ui[d.key]; render(); };
+ACTS['dist-general'] = (d) => { const t = ensureThread(d.id, 'General'); S.ui.chat_open = true; go('#/s/chat/' + t.id); };
+ACTS['chat-return'] = (d) => { const r = returnById(d.id), t = ensureThread(r.dist, r.id), isS = S.role === 'supplier'; closeOv(); S.ui.chat_open = true; go((isS ? '#/s/chat/' : '#/d/chat/') + t.id); };
+ACTS['ret-do'] = (d) => {
+  const e = {};
+  if (!FORM.dec) e.dec = 'Choose whether to accept or reject this return.';
+  else if (FORM.dec === 'accept' && !FORM.cond) e.cond = 'Confirm whether the item is in good condition.';
+  else if (FORM.dec === 'reject' && (FORM.note || '').trim().length < 5) e.note = 'Write the reason for rejecting so the distributor knows what to fix.';
+  RET_DEC_ERR = e; if (Object.keys(e).length) { paintOv(); return; }
+  const r = processReturn(d.id, FORM.dec === 'reject' ? 'reject' : FORM.cond === 'good' ? 'good' : 'damaged', (FORM.note || '').trim());
+  ACTS['ov-close'](); toast(`${r.id}: ${r.status}`, 'ok'); render();
+};
 
 /* ============ Messages (shared by both roles) ============ */
+const ctxLabel = (c) => c === 'General' ? 'General' : isRetCtx(c) ? 'Return ' + c : 'Order ' + c;
+const bubbleHtml = (m, role) => m.from === 'system'
+  ? `<div class="sysmsg"><span>${esc(m.text)}</span>${m.detail ? `<em>${esc(m.detail)}</em>` : ''}<time>${fmtDT(m.at)}</time></div>`
+  : `<div class="bubble ${m.from === (role === 'supplier' ? 'supplier' : 'dist') ? 'me' : ''}">${esc(m.text)}<time>${fmtDT(m.at)}</time></div>`;
+/* finished orders and returns show in General as one collapsed line; click to see that chat */
+function msgHtml(m, role) {
+  if (m.kind !== 'status') return bubbleHtml(m, role);
+  const key = 'exp_' + (m.ref || m.ctx + m.at), ref = m.ref && threadById(m.ref), open = !!getU(key, false);
+  const inner = ref ? ref.msgs.filter(x => x.from !== 'system') : [];
+  const tone = { Delivered: 'delivered', Approved: 'restocked', Rejected: 'rejected', Cancelled: 'cancelled' }[m.label];
+  return `<div class="statusline ${open ? 'open' : ''}"><button type="button" class="sl-head" data-act="toggle-status" data-key="${key}" aria-expanded="${open}">${icon(open ? 'down' : 'right', 16)}<span class="grow"><b>${esc(m.text)}</b>${m.detail ? `<span class="small muted">Reason: ${esc(m.detail)}</span>` : ''}<time>${fmtDT(m.at)}${inner.length ? ' · ' + inner.length + ' message' + (inner.length > 1 ? 's' : '') : ''}</time></span>${badge(tone, m.label)}</button>${open ? `<div class="sl-body">${inner.length ? inner.map(x => bubbleHtml(x, role)).join('') : '<div class="muted small">No messages were sent in this chat.</div>'}</div>` : ''}</div>`;
+}
 function chatPage(role, r) {
-  const mine = role === 'supplier' ? S.threads : myThreads();
-  const sorted = [...mine].sort((a, b) => (threadTime(b) ? 1 : 0) - (threadTime(a) ? 1 : 0) || threadTime(b) - threadTime(a));
-  if (r.arg && threadById(r.arg)) { S.ui.chat_t = r.arg; S.ui.chat_open = true; } else if (ROUTE_CHANGED) S.ui.chat_open = false;
+  const all = role === 'supplier' ? S.threads : myThreads();
+  const selNow = threadById(getU('chat_t', null)), keepId = (ROUTE_CHANGED && !r.arg) ? null : (selNow && selNow.id);
+  // finished chats leave the list after they were viewed; the supplier reaches General chats from the heads row
+  const mine = all.filter(th => th.id === keepId || th.id === r.arg || !((th.closed && th.seen[role]) || (role === 'supplier' && th.ctx === 'General')));
+  const grp = (th) => th.ctx === 'General' ? 2 : isRetCtx(th.ctx) ? 1 : 0; // distributor: orders, then returns, then general
+  const sorted = [...mine].sort((a, b) => (role === 'distributor' ? grp(a) - grp(b) : 0) || (threadTime(b) ? 1 : 0) - (threadTime(a) ? 1 : 0) || threadTime(b) - threadTime(a));
+  // a thread in the address only applies when you arrive; afterwards the list decides which chat is open
+  if (ROUTE_CHANGED) { if (r.arg && threadById(r.arg)) { S.ui.chat_t = r.arg; S.ui.chat_open = true; } else S.ui.chat_open = false; }
   const selId = getU('chat_t', sorted[0] && sorted[0].id), t = threadById(selId) && mine.includes(threadById(selId)) ? threadById(selId) : sorted[0];
   if (t) S.ui.chat_t = t.id;
   const inConv = !!getU('chat_open', false) && !!t;
   if (t && (inConv || !isPhone())) markThreadRead(t, role);
   const other = (th) => role === 'supplier' ? dist(th.dist).name : 'BilMagic Supply';
-  const list = sorted.map(th => { const lm = lastMsg(th), un = th.msgs.filter(m => !m.read && m.from === (role === 'supplier' ? 'dist' : 'supplier')).length; return `<button class="thread ${t && th.id === t.id ? 'on' : ''}" data-act="open-thread" data-id="${th.id}">${avatar(other(th), 'sm')}<span class="grow"><span class="meta"><b>${esc(other(th))}</b><span class="muted small">${lm ? fmtSmart(lm.at) : ''}</span></span><span class="prev">${lm ? (lm.from === (role === 'supplier' ? 'supplier' : 'dist') ? 'You: ' : '') + esc(lm.text) : 'No messages yet'}</span><span class="ctx">${th.ctx === 'General' ? 'General' : 'Order ' + th.ctx}</span></span>${un ? `<span class="badge-n">${un}</span>` : ''}</button>`; }).join('');
+  const list = sorted.map(th => { const lm = lastMsg(th), un = th.msgs.filter(m => !m.read && m.from === (role === 'supplier' ? 'dist' : 'supplier')).length; return `<button class="thread ${t && th.id === t.id ? 'on' : ''}" data-act="open-thread" data-id="${th.id}">${avatar(other(th), 'sm')}<span class="grow"><span class="meta"><b>${esc(other(th))}</b><span class="muted small">${lm ? fmtSmart(lm.at) : ''}</span></span><span class="prev">${lm ? (lm.from === (role === 'supplier' ? 'supplier' : 'dist') ? 'You: ' : '') + esc(lm.text) : 'No messages yet'}</span><span class="ctx">${ctxLabel(th.ctx)}</span></span>${un ? `<span class="badge-n">${un}</span>` : ''}</button>`; }).join('');
   let conv = `<div class="empty-conv">${icon('chat', 32)}<p>Select a conversation</p></div>`;
   if (t) {
-    const o = t.ctx !== 'General' ? orderById(t.ctx) : null;
+    const ret = isRetCtx(t.ctx) ? returnById(t.ctx) : null, o = !ret && t.ctx !== 'General' ? orderById(t.ctx) : null;
     const viewRoute = role === 'supplier' ? '#/s/orders/' : '#/d/order/';
     conv = `<div class="conv-head"><button class="icon-btn sm show-m" data-act="chat-back" aria-label="Back to conversations">${icon('left')}</button>${avatar(other(t), 'sm')}<div class="grow"><b>${esc(other(t))}</b><div class="muted small">${role === 'supplier' ? esc(dist(t.dist).shop) : 'Supplier'}</div></div></div>
-      ${o ? `<div class="pinned"><span class="lbl">Order</span><b>${o.id}</b>${orderBadge(o.status)}<span class="small muted">${peso(orderTotal(o))}</span><a class="btn sm" style="margin-left:auto" href="${viewRoute}${o.id}">View order</a></div>` : `<div class="pinned"><span class="lbl">General conversation</span><span class="small muted">Not linked to an order</span></div>`}
-      <div class="msgs" aria-live="polite">${t.msgs.length ? t.msgs.map(m => `<div class="bubble ${m.from === (role === 'supplier' ? 'supplier' : 'dist') ? 'me' : ''}">${esc(m.text)}<time>${fmtDT(m.at)}</time></div>`).join('') : `<div class="empty-conv">No messages yet. Say hello.</div>`}</div>
+      ${ret ? `<div class="pinned"><span class="lbl">Return</span><b>${ret.id}</b>${returnBadge(ret.status)}<span class="small muted">${ret.qty} × ${esc(prod(ret.sku).name)}</span>${role === 'supplier' ? `<a class="btn sm" style="margin-left:auto" href="#/s/returns/${ret.id}">View return</a>` : `<button class="btn sm" style="margin-left:auto" data-act="open-return" data-id="${ret.id}">View return</button>`}</div>` : o ? `<div class="pinned"><span class="lbl">Order</span><b>${o.id}</b>${orderBadge(o.status)}<span class="small muted">${peso(orderTotal(o))}</span><a class="btn sm" style="margin-left:auto" href="${viewRoute}${o.id}">View order</a></div>` : `<div class="pinned"><span class="lbl">General conversation</span><span class="small muted">Not linked to an order</span></div>`}
+      <div class="msgs" aria-live="polite">${t.msgs.length ? t.msgs.map(m => msgHtml(m, role)).join('') : `<div class="empty-conv">No messages yet. Say hello.</div>`}</div>
       <form class="composer" data-submit="chat" novalidate><input id="f_msg" data-form="msg" value="${esc(FORM.msg || '')}" placeholder="Write a message" aria-label="Message" autocomplete="off"><button class="btn primary" type="submit">${icon('send', 16)} <span class="hide-m">Send</span></button></form>`;
   }
   return `${pageHead('Messages', role === 'supplier' ? 'Supplier and distributor conversations, linked to orders.' : 'Chat with BilMagic Supply about your orders.')}
   <div class="alert info hide-m">${icon('info')}<span>Simulated chat. The spec describes WebSocket delivery and push notifications, which are not connected in this prototype. The other side auto-replies after a moment.</span></div>
+  ${role === 'supplier' ? `<div class="heads ${inConv ? 'hide-conv' : ''}" role="list" aria-label="Distributor general chats">${DISTRIBUTORS.map(d => { const g = S.threads.find(x => x.dist === d.id && x.ctx === 'General'), un = g ? g.msgs.filter(m => !m.read && m.from === 'dist').length : 0, on = t && t.ctx === 'General' && t.dist === d.id; return `<button type="button" role="listitem" class="head ${on ? 'on' : ''}" data-act="dist-general" data-id="${d.id}" title="General chat with ${esc(d.name)}">${avatar(d.name, 'gold')}${un ? `<i class="dot" aria-label="${un} unread"></i>` : ''}<span>${esc(d.name.split(' ')[0])}</span></button>`; }).join('')}</div>` : ''}
   <div class="split ${inConv ? 'in-conv' : ''}"><div class="thread-list" role="list">${list}</div><div class="conv">${conv}</div></div>`;
 }
 PAGES.s.chat = (r) => chatPage('supplier', r);
@@ -308,6 +349,7 @@ function settingsPage(role) {
       ${!isS ? `${field('Delivery address', `<textarea class="input" id="f_saddr" data-form="saddr" rows="2">${esc(FORM.saddr === undefined ? (FORM.saddr = pr.address) : FORM.saddr)}</textarea>`)}${field('Language', fs('slang', ['English', 'Filipino']))}` : ''}
       <button class="btn primary" data-act="save-profile">Save changes</button></section>
     <div class="stack">
+      ${!isS ? defaultPayCard() : ''}
       <section class="card"><div class="card-head"><div><h2>Notification preferences</h2></div></div>${prefRows.map(([k, l, d]) => sw(role + '.' + k, prefs[k], l, d)).join('')}</section>
       ${!isS ? `<section class="card"><div class="card-head"><div><h2>Password and security</h2></div></div><p class="muted" style="margin-bottom:12px">Change your password. Prototype only: nothing is stored.</p><button class="btn" data-act="pw-open">${icon('lock', 16)} Change password</button></section>` : ''}
       <section class="card"><div class="card-head"><div><h2>Prototype tools</h2><p>Simulated states for design review. Nothing here touches a real backend.</p></div></div>

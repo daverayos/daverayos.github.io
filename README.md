@@ -14,6 +14,7 @@ Pick **Supplier** or **Distributor**, enter any email and a password of 6+ chara
 ## Screens
 Supplier (`#/s/...`): dashboard, inventory (+ product drawer, adjust stock, add/edit, archive/restore), orders (+ drawer, advance/cancel), distributors, returns (+ process), messages, reports, notifications, settings, more (phone).
 Distributor (`#/d/...`): home (+ reorder low items), catalog, product, cart, order placed, orders and returns (+ order detail, cancel, reorder again), new return request, return submitted, my stock, messages, reports, notifications, settings, menu (phone).
+Payments (simulated): Cash on Delivery, E-wallet and Bank (card or bank transfer). Transactions pages for both roles (`#/s/transactions`, `#/d/transactions`).
 Shared: sign-in, forgot password, sign-out dialog.
 
 ## Responsive behaviour
@@ -42,9 +43,13 @@ js/ui.js            helpers, icons, charts, overlay system
 js/app.js           router, shell, sign-in, notifications
 js/supplier.js      supplier pages
 js/distributor.js   distributor pages
+js/payments.js      simulated payments, checkout and transactions
 js/main.js          boot
 ```
 
 ## Swapping the data
 Edit `data/billiard_inventory.csv`, then regenerate `js/csv.js` (one line wraps the file in a template string:
 `const CSV_TEXT = \`...\`;`). Required columns are the same as the original file.
+
+## Payment simulation
+Only test values work: cards 4242 4242 4242 4242 (success), 5555 5555 5555 4444 (success), 4000 0000 0000 0002 (declined); e-wallet code 123456, mobile numbers ending in 0000 are declined. Nothing is stored or sent.

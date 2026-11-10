@@ -24,6 +24,7 @@ const NAV = {
     { id: 'orders', label: 'Orders', icon: 'list', tab: true, badge: () => newOrderCount() },
     { id: 'distributors', label: 'Distributors', icon: 'users' },
     { id: 'returns', label: 'Returns', icon: 'undo', badge: () => reviewCount() },
+    { id: 'transactions', label: 'Transactions', icon: 'card' },
     { id: 'chat', label: 'Messages', icon: 'chat', tab: true, badge: () => unreadChat('supplier') },
     { id: 'reports', label: 'Reports', icon: 'chart' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
@@ -33,6 +34,7 @@ const NAV = {
     { id: 'catalog', label: 'Catalog', icon: 'package', tab: true },
     { id: 'orders', label: 'Orders & Returns', tabLabel: 'Orders', icon: 'list', tab: true },
     { id: 'stock', label: 'My Stock', icon: 'grid' },
+    { id: 'transactions', label: 'Transactions', icon: 'card' },
     { id: 'chat', label: 'Messages', icon: 'chat', tab: true, badge: () => unreadChat('distributor') },
     { id: 'reports', label: 'Reports', icon: 'chart' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
@@ -42,6 +44,7 @@ const ALIAS = { s: { }, d: { product: 'catalog', cart: 'catalog', 'order-placed'
 const TITLES = { s: { more: 'More', notifications: 'Notifications' }, d: { menu: 'Menu', notifications: 'Notifications', product: 'Product', cart: 'Cart', order: 'Order', return: 'Return request', 'order-placed': 'Order placed', 'return-submitted': 'Return submitted' } };
 
 /* ---------- Render ---------- */
+let KEEP_MSGS_TOP = null; // set when expanding a status line so the chat stays where it is
 function render() {
   const r = parseRoute();
   if (!S.role) { if (r.area !== 'signin') { location.hash = '#/signin'; return; } }
@@ -70,7 +73,7 @@ function render() {
   if (OV) paintOv();
   window.scrollTo(0, y);
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); if (fsel != null && el.setSelectionRange && !['number', 'email'].includes(el.type)) try { el.setSelectionRange(fsel, fsel); } catch (e) { } } }
-  const ms = $('.msgs'); if (ms) ms.scrollTop = ms.scrollHeight;
+  const ms = $('.msgs'); if (ms) { ms.scrollTop = KEEP_MSGS_TOP !== null ? KEEP_MSGS_TOP : ms.scrollHeight; KEEP_MSGS_TOP = null; }
   if (changed) AFTER.forEach(f => f());
 }
 

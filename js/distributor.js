@@ -98,18 +98,18 @@ PAGES.d.cart = () => {
   <aside class="card sticky-foot"><div class="card-head"><div><h2>Order summary</h2></div></div>
     <div class="totals"><div><span>Subtotal</span><span>${peso(t.sub)}</span></div><div><span>VAT (12%)</span><span>${peso(t.vat)}</span></div><div class="t"><span>Total</span><span>${peso(t.total)}</span></div></div>
     <div class="sec-title">Deliver to</div><p>${esc(me().shop)}<br><span class="muted">${esc(me().address)}</span></p>
-    <button class="btn gold lg block" style="margin-top:16px" data-act="cart-place">Place order · ${peso(t.total)}</button><p class="small muted" style="margin-top:10px">Prototype only: no payment is taken. Your order goes to BilMagic as New.</p></aside></div>`;
+    ${payPicker()}<button class="btn gold lg block" style="margin-top:16px" data-act="cart-place">Place order · ${peso(t.total)}</button><p class="small muted" style="margin-top:10px">Prototype only: payments are simulated. Your order goes to BilMagic as New.</p></aside></div>`;
 };
 QTY.cart = (sku, v) => { cartSet(sku, v); render(); };
 Object.assign(ACTS, {
   'cart-rm': (d) => { cartRemove(d.sku); toast('Removed from cart'); render(); },
   'cart-clear': () => { S.cart = []; render(); },
-  'cart-place': () => { const o = placeOrder(S.cart); S.cart = []; go('#/d/order-placed/' + o.id); }
+  'cart-place': () => { const o = placeOrder(S.cart, payChoice()); S.cart = []; delete FORM.paym; go('#/d/order-placed/' + o.id); }
 });
 PAGES.d['order-placed'] = (r) => {
   const o = orderById(r.arg); if (!o) return `<div class="card">${empty('list', 'Order not found', '', `<a class="btn" href="#/d/orders">My orders</a>`)}</div>`;
-  return `<section class="card success"><div class="big">${icon('check')}</div><h1>Order placed</h1><p class="muted" style="margin-top:6px">BilMagic received your order. We will confirm it and start processing shortly.</p><div class="code">${o.id}</div><div class="totals" style="max-width:280px;margin:0 auto 18px"><div><span>${plural(orderUnits(o), 'item')}</span><span></span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div>
-    <div class="stack" style="max-width:320px;margin:0 auto"><a class="btn primary lg" href="#/d/order/${o.id}">Track this order</a><button class="btn" data-act="chat-order-d" data-id="${o.id}">${icon('chat', 16)} Message supplier</button><a class="btn ghost" href="#/d/catalog">Continue shopping</a></div></section>`;
+  return `<section class="card success"><div class="big">${icon('check')}</div><h1>Order placed</h1><p class="muted" style="margin-top:6px">BilMagic received your order. We will confirm it and start processing shortly.</p><div class="code">${o.id}</div><div class="totals" style="max-width:280px;margin:0 auto 18px"><div><span>${plural(orderUnits(o), 'item')}</span><span></span></div><div><span>Payment</span><span>${PAY[o.pay.method].label}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div>
+    <div class="stack" style="max-width:320px;margin:0 auto">${o.pay.method !== 'cod' ? `<button class="btn gold lg" data-act="pay-open" data-id="${o.id}">${icon('card', 16)} Pay now</button>` : `<p class="muted small">Payment is collected in cash on delivery.</p>`}<a class="btn primary lg" href="#/d/order/${o.id}">Track this order</a><button class="btn" data-act="chat-order-d" data-id="${o.id}">${icon('chat', 16)} Message supplier</button><a class="btn ghost" href="#/d/catalog">Continue shopping</a></div></section>`;
 };
 
 /* ============ Orders and returns ============ */
@@ -123,7 +123,7 @@ PAGES.d.orders = (r) => {
     const list = os.filter(o => f === 'All' || o.status === f);
     body = tabsRow('d_ord_tab', ORDER_TABS.map(t => [t, t, t === 'All' ? os.length : os.filter(o => o.status === t).length]), f) + (list.length ? `<div class="stack">${list.map(o => `<button class="card" style="text-align:left;cursor:pointer" data-act="go" data-to="#/d/order/${o.id}"><div class="row wrap"><b>${o.id}</b>${orderBadge(o.status)}<span class="grow"></span><b>${peso(orderTotal(o))}</b></div><div class="muted small" style="margin-top:6px">${fmtDT(o.placed)} · ${plural(orderUnits(o), 'item')} · ${plural(o.items.length, 'product')}</div><div class="link small" style="margin-top:8px;display:inline-block">View details</div></button>`).join('')}</div>` : `<div class="card">${empty('list', 'No orders here', 'No orders with this status.')}</div>`);
   } else {
-    body = rs.length ? `<div class="stack">${rs.map(x => `<button class="card" style="text-align:left;cursor:pointer" data-act="open-return" data-id="${x.id}"><div class="row wrap"><b>${x.id}</b>${returnBadge(x.status)}<span class="grow"></span><span class="muted small">${fmtDT(x.at)}</span></div><div style="margin-top:6px">${x.qty} × ${esc(prod(x.sku).name)}</div><div class="muted small">Order ${x.order} · ${condLabel(x.cond)}</div></button>`).join('')}</div>` : `<div class="card">${empty('undo', 'No returns yet', 'Open a delivered order to request a return.')}</div>`;
+    body = rs.length ? `<div class="stack">${rs.map(x => `<button class="card" style="text-align:left;cursor:pointer" data-act="open-return" data-id="${x.id}"><div class="row wrap"><b>${x.id}</b>${returnBadge(x.status)}<span class="grow"></span><span class="muted small">${fmtDT(x.at)}</span></div><div style="margin-top:6px">${x.qty} × ${esc(prod(x.sku).name)}</div><div class="muted small">Order ${x.order} · ${esc(retKind(x))}</div></button>`).join('')}</div>` : `<div class="card">${empty('undo', 'No returns yet', 'Open a delivered order to request a return.')}</div>`;
   }
   return `${pageHead('Orders and returns', 'Track your wholesale orders and return requests.')}${seg}${body}`;
 };
@@ -139,6 +139,7 @@ PAGES.d.order = (r) => {
     <section class="card"><div class="card-head"><div><h2>Items</h2></div></div><div class="line-items">${o.items.map(i => { const p = prod(i.sku); return `<div class="li"><span class="tile">${catIcon(p.category)}</span><div class="grow"><b class="title-sm">${esc(p.name)}</b><div class="muted small">${i.qty} × ${peso(i.price)}</div></div><b>${peso(i.qty * i.price)}</b></div>`; }).join('')}</div>
     <div class="totals"><div><span>Subtotal</span><span>${peso(orderSub(o))}</span></div><div><span>VAT (12%)</span><span>${peso(orderVat(o))}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div></section></div>
   <div class="stack"><section class="card"><div class="card-head"><div><h2>Status history</h2></div></div><ul class="timeline">${[...o.history].reverse().map(h => `<li><b>${h.status}</b><span class="muted small">${fmtDT(h.at)}</span></li>`).join('')}</ul></section>
+    ${paymentCard(o, 'distributor')}
     <section class="card"><div class="stack">${o.status === 'Delivered' ? `<a class="btn gold" href="#/d/return/new/${o.id}">${icon('undo', 16)} Request a return</a>` : ''}${o.status === 'New' ? `<button class="btn" data-act="d-cancel-ask" data-id="${o.id}">Cancel order</button>` : ''}<button class="btn" data-act="chat-order-d" data-id="${o.id}">${icon('chat', 16)} Message supplier</button><button class="btn" data-act="reorder-order" data-id="${o.id}">${icon('refresh', 16)} Order these items again</button></div>
       ${retOf.length ? `<div class="sec-title">Returns on this order</div>${retOf.map(x => `<button class="list-row" data-act="open-return" data-id="${x.id}"><span class="grow"><b class="title-sm">${x.id}</b><span class="muted small" style="display:block">${x.qty} × ${esc(prod(x.sku).name)}</span></span>${returnBadge(x.status)}</button>`).join('')}` : ''}</section></div></div>`;
 };
@@ -150,43 +151,58 @@ Object.assign(ACTS, {
 });
 
 /* ============ Return request ============ */
-let PHOTOS = [], PH_ERR = '', RET_ERR = {};
+let PHOTOS = [], PH_ERR = '', RET_ERR = {}, VIDEO = null, VID_ERR = '';
+const MAX_VIDEO = 150 * 1024 * 1024;
 PAGES.d.return = (r) => {
   const o = orderById(r.arg2); if (!o || o.dist !== ME_DIST || o.status !== 'Delivered') return `${backLink('#/d/orders', 'Orders')}<div class="card">${empty('undo', 'Returns are for delivered orders', 'Open a delivered order and choose Request a return.')}</div>`;
-  if (ROUTE_CHANGED) { PHOTOS = []; PH_ERR = ''; RET_ERR = {}; }
+  if (ROUTE_CHANGED) { PHOTOS = []; PH_ERR = ''; RET_ERR = {}; VIDEO = null; VID_ERR = ''; }
   const elig = o.items.filter(i => returnable(o, i.sku) > 0);
   if (!elig.length) return `${backLink('#/d/order/' + o.id, 'Order')}<div class="card">${empty('check', 'Nothing left to return', 'All items on this order already have return requests.')}</div>`;
-  if (!FORM.rsku || !elig.some(i => i.sku === FORM.rsku)) Object.assign(FORM, { rsku: elig[0].sku, rqty: 1, rcond: 'good', rreason: 'Ordered too many', rnote: '' });
-  const max = returnable(o, FORM.rsku), e = RET_ERR, dmg = FORM.rcond === 'damaged';
-  const opt = (v, t, s) => `<div class="radio-card ${FORM.rcond === v ? 'on' : ''}" role="radio" aria-checked="${FORM.rcond === v}" tabindex="0" data-act="fset" data-k="rcond" data-v="${v}"><span>${icon(FORM.rcond === v ? 'check' : 'plus', 18)}</span><div><b>${t}</b><span>${s}</span></div></div>`;
-  return `${backLink('#/d/order/' + o.id, 'Order ' + o.id)}${pageHead('New return request', `For order ${o.id}. Submitting never restocks items; BilMagic inspects them first.`)}
+  if (!FORM.rsku || !elig.some(i => i.sku === FORM.rsku)) Object.assign(FORM, { rsku: elig[0].sku, rqty: 1, rreason: 'Wrong item', rnote: '' });
+  const max = returnable(o, FORM.rsku), e = RET_ERR;
+  const _unused = (v, t, s) => `<div class="radio-card ${FORM.rcond === v ? 'on' : ''}" role="radio" aria-checked="${FORM.rcond === v}" tabindex="0" data-act="fset" data-k="rcond" data-v="${v}"><span>${icon(FORM.rcond === v ? 'check' : 'plus', 18)}</span><div><b>${t}</b><span>${s}</span></div></div>`;
+  return `${backLink('#/d/order/' + o.id, 'Order ' + o.id)}${pageHead('New return request', `For order ${o.id}. Submitting never restocks items; BilMagic inspects them first. A video of you unpacking the package and at least one photo are required.`)}
   <div class="grid-2"><section class="card">
     ${field('Product', fs('rsku', elig.map(i => [i.sku, `${prod(i.sku).name} (up to ${returnable(o, i.sku)})`])))}
     ${field('Quantity', `<div>${qtyStepper('rq:x', clamp(parseInt(FORM.rqty, 10) || 1, 1, max), max, false)}</div>`, { err: e.qty, hint: `You can return up to ${max}.` })}
-    <div class="field"><label>Return condition</label>${opt('good', 'Good condition', 'May be restocked after review.')}${opt('damaged', 'Damaged or defective', 'Handled separately. Not restocked. Photos are required.')}</div>
-    ${field('Reason', fs('rreason', ['Ordered too many', 'Wrong item received', 'Arrived damaged', 'Defective item', 'Other']))}
+    ${field('Reason', fs('rreason', RETURN_REASONS))}
     ${field('Details', `<textarea class="input ${e.note ? 'bad' : ''}" id="f_rnote" data-form="rnote" rows="3" placeholder="Describe what happened">${esc(FORM.rnote || '')}</textarea>`, { err: e.note })}
   </section>
-  <section class="card"><div class="card-head"><div><h2>Photos ${dmg ? '<span style="color:var(--bad)">(required)</span>' : '(optional)'}</h2><p>JPG, PNG or WebP, up to 5 MB each, max 3 photos.</p></div></div>
+  <section class="card">
+    <div class="card-head"><div><h2>Unboxing video <span style="color:var(--bad)">(required)</span></h2><p>Record yourself unpacking the package. MP4, MOV or WebM, up to 150 MB (about 2 minutes of 720p at 60 fps). Requests without it are rejected.</p></div></div>
+    ${VIDEO ? `<video class="vid" src="${VIDEO.url}" controls preload="metadata"></video><div class="row wrap" style="margin:8px 0 12px"><span class="grow small"><b>${esc(VIDEO.name)}</b> · ${fmtMB(VIDEO.size)}</span><label class="btn sm" style="cursor:pointer">Replace<input class="sr" type="file" accept="video/mp4,video/quicktime,video/webm" data-video aria-label="Replace video"></label><button class="btn sm" data-act="video-rm">Remove</button></div>` : `<label class="dropzone" style="cursor:pointer">${icon('plus', 22)}<span><b>Add unboxing video</b><br><span class="muted small">Tap to choose a video from your device</span></span><input class="sr" type="file" accept="video/mp4,video/quicktime,video/webm" data-video aria-label="Add unboxing video"></label>`}
+    ${VID_ERR || e.video ? `<div class="alert err" style="margin-bottom:14px">${icon('alert')}<span>${esc(VID_ERR || e.video)}</span></div>` : ''}
+    <div class="card-head" style="margin-top:8px"><div><h2>Photos <span style="color:var(--bad)">(at least 1 required)</span></h2><p>Photo of the item. For damage or defects, show it in detail. JPG, PNG or WebP, up to 5 MB each, max 3 photos.</p></div></div>
     <div class="photos" style="margin-bottom:12px">${PHOTOS.map((p, i) => `<div class="photo"><img src="${p.url}" alt="${esc(p.name)}"><button class="rm" data-act="photo-rm" data-i="${i}" aria-label="Remove photo">${icon('x')}</button></div>`).join('')}${PHOTOS.length < 3 ? `<label class="photo" style="cursor:pointer" title="Add photo">${icon('plus', 22)}<input class="sr" type="file" accept="image/jpeg,image/png,image/webp" multiple data-photos aria-label="Add photos"></label>` : ''}</div>
     ${PH_ERR || e.photos ? `<div class="alert err">${icon('alert')}<span>${esc(PH_ERR || e.photos)}</span></div>` : ''}
-    <div class="alert info">${icon('info')}<span>Photos stay in your browser in this prototype and are not uploaded.</span></div>
+    <div class="alert info">${icon('info')}<span>The video and photos stay in your browser in this prototype and are not uploaded.</span></div>
     <button class="btn gold lg block" data-act="ret-submit" data-order="${o.id}">Submit return request</button></section></div>`;
 };
 QTY.rq = (id, v) => { FORM.rqty = v; render(); };
 Object.assign(ACTS, {
   'photo-rm': (d) => { PHOTOS.splice(+d.i, 1); render(); },
+  'video-rm': () => { VIDEO = null; render(); },
   'ret-submit': (d) => {
     const o = orderById(d.order), max = returnable(o, FORM.rsku), qty = clamp(parseInt(FORM.rqty, 10) || 1, 1, max), e = {};
     if (!(qty >= 1 && qty <= max)) e.qty = `Enter a quantity between 1 and ${max}.`;
     if ((FORM.rnote || '').trim().length < 10) e.note = 'Add a few details (at least 10 characters).';
-    if (FORM.rcond === 'damaged' && !PHOTOS.length) e.photos = 'Add at least one photo of the damage.';
+    if (!VIDEO) e.video = 'Add the video of you unpacking the package. Requests without it are rejected.';
+    if (!PHOTOS.length) e.photos = 'Add at least one photo of the item.';
     RET_ERR = e; if (Object.keys(e).length) { render(); return; }
-    const r = submitReturn({ order: o.id, sku: FORM.rsku, qty, cond: FORM.rcond, reason: `${FORM.rreason}. ${FORM.rnote.trim()}`, photos: PHOTOS.length });
-    PHOTOS = []; go('#/d/return-submitted/' + r.id);
+    const r = submitReturn({ order: o.id, sku: FORM.rsku, qty, reason: `${FORM.rreason}. ${FORM.rnote.trim()}`, photos: PHOTOS.map(p => p.url), video: VIDEO });
+    PHOTOS = []; VIDEO = null; go('#/d/return-submitted/' + r.id);
   }
 });
 document.addEventListener('change', (e) => {
+  if (e.target.dataset && e.target.dataset.video !== undefined) {
+    const f = e.target.files[0]; VID_ERR = '';
+    if (f) {
+      if (!/^video\/(mp4|quicktime|webm)$/.test(f.type)) VID_ERR = `${f.name}: only MP4, MOV or WebM videos are allowed.`;
+      else if (f.size > MAX_VIDEO) VID_ERR = `${f.name} is ${fmtMB(f.size)}. The limit is 150 MB.`;
+      else VIDEO = { name: f.name, size: f.size, url: URL.createObjectURL(f) };
+    }
+    render();
+  }
   if (e.target.dataset && e.target.dataset.photos !== undefined) {
     PH_ERR = '';
     [...e.target.files].forEach(f => {
@@ -201,7 +217,7 @@ document.addEventListener('change', (e) => {
 });
 PAGES.d['return-submitted'] = (r) => {
   const x = returnById(r.arg); if (!x) return `<div class="card">${empty('undo', 'Return not found', '', `<a class="btn" href="#/d/orders">My orders</a>`)}</div>`;
-  return `<section class="card success"><div class="big">${icon('check')}</div><h1>Return submitted</h1><p class="muted" style="margin-top:6px">BilMagic will inspect ${x.qty} × ${esc(prod(x.sku).name)}. Items are only restocked if they pass inspection as good condition.</p><div class="code">${x.id}</div><div style="margin-bottom:18px">${returnBadge(x.status)}</div>
+  return `<section class="card success"><div class="big">${icon('check')}</div><h1>Return submitted</h1><p class="muted" style="margin-top:6px">BilMagic will inspect ${x.qty} × ${esc(prod(x.sku).name)}. BilMagic reviews your video and photos. If the request is not accurate it is rejected and you will need to submit a new one.</p><div class="code">${x.id}</div><div style="margin-bottom:18px">${returnBadge(x.status)}</div>
     <div class="stack" style="max-width:320px;margin:0 auto"><a class="btn primary lg" href="#/d/orders/returns">View my returns</a><a class="btn ghost" href="#/d/home">Back to home</a></div></section>`;
 };
 
