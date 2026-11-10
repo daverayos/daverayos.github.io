@@ -235,7 +235,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const fn = ACTS[el.dataset.act]; if (!fn) return;
   if (el.tagName === 'A' && el.dataset.act === 'ov-close') { fn(el.dataset, el, e); return; }
-  e.preventDefault(); UNDO.run(el.dataset.act, () => fn(el.dataset, el, e));
+  e.preventDefault(); UNDO.run(el.dataset.act, () => fn(el.dataset, el, e), el.dataset.act === 'stk' ? 'stk:' + el.dataset.sku : '');
 });
 document.addEventListener('submit', (e) => { const f = e.target.closest('[data-submit]'); if (!f) return; e.preventDefault(); const fn = SUBMIT[f.dataset.submit]; if (fn) UNDO.run('submit-' + f.dataset.submit, fn); });
 document.addEventListener('input', (e) => {

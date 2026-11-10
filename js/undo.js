@@ -8,11 +8,11 @@ Object.assign(ICONS, { redo: '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9
 const UNDO = (() => {
   const KEYS = ['products', 'shop', 'orders', 'returns', 'threads', 'notifs', 'sales', 'retail', 'profile', 'prefs'];
   const MAX = 30;
-  let undos = [], redos = [], lastToast = '';
+  let undos = [], redos = [], lastToast = '', toasted = false;
   const snap = () => JSON.stringify(KEYS.map(k => S[k]));
   const stable = (j) => j.replace(/"(read|seen)":(true|false|\{[^}]*\})/g, '');   // opening a chat only marks things read: not an undoable move
   const load = (j) => { JSON.parse(j).forEach((v, i) => { S[KEYS[i]] = v; }); };
-  const nice = (act) => ({ 'adj-save': 'Stock count change', 'sold-save': 'Sale', 'prod-save': 'Product change', 'arch-do': 'Archive', restore: 'Restore', 'ret-do': 'Return decision', 'pay-confirm': 'Mark as paid', 'waive-do': 'Waive interest', 'order-advance': 'Order update' }[act] || 'Change');
+  const nice = (act) => ({ 'stk': 'Stock count change', 'sold-save': 'Sale', 'prod-save': 'Product change', 'arch-do': 'Archive', restore: 'Restore', 'ret-do': 'Return decision', 'pay-confirm': 'Mark as paid', 'waive-do': 'Waive interest', 'order-advance': 'Order update' }[act] || 'Change');
   function syncBar() {
     $$('[data-act=undo]').forEach(b => { b.disabled = !undos.length; b.title = undos.length ? 'Undo: ' + undos[undos.length - 1].label + ' (Ctrl+Z)' : 'Nothing to undo'; });
     $$('[data-act=redo]').forEach(b => { b.disabled = !redos.length; b.title = redos.length ? 'Redo: ' + redos[redos.length - 1].label + ' (Ctrl+Shift+Z)' : 'Nothing to redo'; });
@@ -24,18 +24,21 @@ const UNDO = (() => {
   return {
     get canUndo() { return undos.length > 0; }, get canRedo() { return redos.length > 0; },
     setToast(m) { lastToast = m; },
+    markToasted() { toasted = true; },
     reset() { undos = []; redos = []; syncBar(); },
     syncBar,
     // run one user action; if it changed data, make it undoable
-    run(act, fn) {
+    run(act, fn, key) {
       if (S.role !== 'supplier' || /^(undo|redo|hist-undo|hist-redo)$/.test(act)) return fn();
-      const before = snap(); lastToast = '';
+      const before = snap(); lastToast = ''; toasted = false;
       const r = fn();
       if (S.role !== 'supplier') return r;
       const after = snap();
       if (stable(after) !== stable(before)) {
-        undos.push({ label: lastToast || nice(act), before, after }); if (undos.length > MAX) undos.shift(); redos = [];
-        toastBtn('undo', 'Undo');
+        const top = undos[undos.length - 1], t = Date.now();
+        if (key && top && top.key === key && t - top.at < 1500 && !redos.length) { top.after = after; top.at = t; top.label = lastToast || top.label; }   // rapid +/- clicks are one move
+        else { undos.push({ label: lastToast || nice(act), before, after, key, at: t }); if (undos.length > MAX) undos.shift(); redos = []; }
+        if (toasted) toastBtn('undo', 'Undo');
       }
       syncBar(); return r;
     },
@@ -53,7 +56,7 @@ const UNDO = (() => {
 
 /* the toast text names the move in the history */
 const _toast = toast;
-toast = function (msg, kind) { UNDO.setToast(msg); return _toast(msg, kind); };
+toast = function (msg, kind) { UNDO.setToast(msg); UNDO.markToasted(); return _toast(msg, kind); };
 
 /* ---------- dialog typing history ---------- */
 const HIST = (() => {
@@ -91,7 +94,7 @@ Object.assign(ACTS, {
 document.addEventListener('input', (e) => {
   const t = e.target; if (!OV || !t.dataset || !t.dataset.form || !t.closest('#overlay')) return;
   HIST.record(t.dataset.form);
-  if (t.dataset.live !== undefined) paintOv();
+  if (t.dataset.live !== undefined) { const f = LIVE[t.dataset.live]; if (f) f(t.dataset.sku); else paintOv(); }
 });
 document.addEventListener('change', (e) => { const t = e.target; if (OV && t.dataset && t.dataset.form && t.closest('#overlay')) setTimeout(() => HIST.record(''), 0); });
 document.addEventListener('keydown', (e) => {

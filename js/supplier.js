@@ -35,7 +35,7 @@ PAGES.s.dashboard = () => {
     </section>
     <section class="card" aria-label="Low-stock alerts">
       <div class="card-head"><div><h2>Low-stock alerts</h2><p>${plural(alerts.length, 'product')} at or below their reorder point</p></div><button class="link" data-act="inv-needs">View all</button></div>
-      ${alerts.length ? alerts.slice(0, 6).map(p => `<div class="list-row"><span class="tile">${catIcon(p.category)}</span><button class="grow" style="background:none;border:0;text-align:left;padding:0;min-width:0" data-act="go" data-to="#/s/inventory/${p.sku}"><span class="title-sm ellipsis" style="display:block">${esc(p.name)}</span><span class="muted small">${p.stock} in stock · reorder at ${p.rop}</span></button>${stockBadge(pStatus(p))}<button class="icon-btn sm" data-act="adj" data-sku="${p.sku}" aria-label="Adjust stock for ${esc(p.name)}" title="Adjust stock">${icon('sliders')}</button></div>`).join('') : empty('check', 'All stocked up', 'Nothing is at or below its reorder point.')}
+      ${alerts.length ? alerts.slice(0, 6).map(p => `<div class="list-row"><span class="tile">${catIcon(p.category)}</span><button class="grow" style="background:none;border:0;text-align:left;padding:0;min-width:0" data-act="go" data-to="#/s/inventory/${p.sku}"><span class="title-sm ellipsis" style="display:block">${esc(p.name)}</span><span class="muted small">${p.stock} in stock · reorder at ${p.rop}</span></button>${stockBadge(pStatus(p))}</div>`).join('') : empty('check', 'All stocked up', 'Nothing is at or below its reorder point.')}
     </section>
   </div>
   <div class="grid-3">
@@ -60,13 +60,13 @@ PAGES.s.inventory = (r) => {
   const q = getU('inv_q', ''), cat = getU('inv_cat', 'All'), st = getU('inv_status', 'All'), sup = getU('inv_sup', 'All'), arch = getU('inv_arch', false);
   const rows = invFiltered(), c = catalog();
   const sel = (id, label, opts, cur) => `<select class="input" id="${id}" data-set="${id}" aria-label="${label}"><option value="All">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-  const body = rows.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th class="hide-t2">SKU</th><th>Product</th><th class="hide-t">Category</th><th class="hide-t">Supplier</th><th class="num">Price</th><th class="num">Stock</th><th class="num hide-t">Reorder at</th><th>Status</th><th class="right">Actions</th></tr></thead><tbody>${rows.map(p => { const s = pStatus(p); return `<tr class="click ${s}-row" data-act="go" data-to="#/s/inventory/${p.sku}">
+  const body = rows.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th class="hide-t2">SKU</th><th>Product</th><th class="hide-t">Category</th><th class="hide-t hide-xl">Supplier</th><th class="num">Price</th><th class="num">Stock</th><th class="num hide-t">Reorder at</th><th>Status</th><th class="right">Actions</th></tr></thead><tbody>${rows.map(p => { const s = pStatus(p); return `<tr class="click ${s}-row" data-act="go" data-to="#/s/inventory/${p.sku}">
       <td data-label="SKU" class="sku hide-t2">${p.sku}</td>
       <td class="first"><div class="pname">${esc(p.name)}</div><div class="pdesc">${esc(p.brand)} · ${esc(p.desc)}</div></td>
-      <td data-label="Category" class="hide-t">${esc(p.category)}</td><td data-label="Supplier" class="hide-t">${esc(p.supplier)}</td>
-      <td data-label="Price" class="num">${peso(p.price)}</td><td data-label="Stock" class="num"><span><b>${p.stock}</b> <span class="muted small">${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'}</span></span></td><td data-label="Reorder at" class="num hide-t">${p.rop}</td>
+      <td data-label="Category" class="hide-t">${esc(p.category)}</td><td data-label="Supplier" class="hide-t hide-xl">${esc(p.supplier)}</td>
+      <td data-label="Price" class="num">${peso(p.price)}</td><td data-label="Stock" class="num">${arch ? `<span><b>${p.stock}</b> <span class="muted small">${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'}</span></span>` : stepperHtml(p)}</td><td data-label="Reorder at" class="num hide-t">${p.rop}</td>
       <td data-label="Status">${arch ? badge('neutral', 'Archived') : stockBadge(s)}</td>
-      <td data-label=""><div class="acts">${arch ? `<button class="btn sm" data-act="restore" data-sku="${p.sku}">Restore</button>` : `<button class="btn sm" data-act="sold" data-sku="${p.sku}" ${p.stock < 1 ? 'disabled' : ''} aria-label="Record a sale of ${esc(p.name)}" title="Sold outside the system">${icon('tag', 14)} Sold</button><button class="btn sm" data-act="adj" data-sku="${p.sku}" aria-label="Edit stock count for ${esc(p.name)}" title="Edit stock count">${icon('sliders', 14)} Stock count</button><button class="icon-btn sm" data-act="prod-edit" data-sku="${p.sku}" aria-label="Edit ${esc(p.name)}" title="Edit">${icon('edit')}</button><button class="icon-btn sm" data-act="arch-ask" data-sku="${p.sku}" aria-label="Archive ${esc(p.name)}" title="Archive">${icon('archive')}</button>`}</div></td></tr>`; }).join('')}</tbody></table></div><div class="tbl-foot">Showing ${rows.length} of ${arch ? S.products.filter(p => p.archived).length : c.length} ${arch ? 'archived ' : ''}products</div>` : empty('search', 'No products match', 'Try a different search or clear the filters.', `<button class="btn" data-act="inv-clear">Clear filters</button>`);
+      <td data-label=""><div class="acts">${arch ? `<button class="btn sm" data-act="restore" data-sku="${p.sku}">Restore</button>` : `<button class="btn sm" data-act="sold" data-sku="${p.sku}" ${p.stock < 1 ? 'disabled' : ''} aria-label="Record a sale of ${esc(p.name)}" title="Sold outside the system">${icon('tag', 14)} Sold</button><button class="icon-btn sm" data-act="prod-edit" data-sku="${p.sku}" aria-label="Edit ${esc(p.name)}" title="Edit">${icon('edit')}</button><button class="icon-btn sm" data-act="arch-ask" data-sku="${p.sku}" aria-label="Archive ${esc(p.name)}" title="Archive">${icon('archive')}</button>`}</div></td></tr>`; }).join('')}</tbody></table></div><div class="tbl-foot">Showing ${rows.length} of ${arch ? S.products.filter(p => p.archived).length : c.length} ${arch ? 'archived ' : ''}products</div>` : empty('search', 'No products match', 'Try a different search or clear the filters.', `<button class="btn" data-act="inv-clear">Clear filters</button>`);
   const out = c.filter(p => pStatus(p) === 'out').length, low = c.filter(p => pStatus(p) === 'low').length;
   return `${pageHead('Inventory', `${plural(c.length, 'SKU')} · ${out} out of stock · ${low} low stock · prices in Philippine peso`, `<button class="btn" data-act="inv-arch">${icon('archive')} ${arch ? 'Back to active' : 'Archived (' + S.products.filter(p => p.archived).length + ')'}</button><button class="btn primary" data-act="prod-new">${icon('plus')} Add product</button>`)}
   <div class="toolbar"><div class="input-wrap"><span class="i-left">${icon('search')}</span><input class="input" id="inv_q" data-set="inv_q" type="search" placeholder="Search name, SKU or brand" value="${esc(q)}" aria-label="Search inventory"></div>
@@ -87,49 +87,53 @@ function productDrawer(sku) {
   const p = prod(sku), st = pStatus(p), margin = p.price ? (p.price - p.cost) / p.price * 100 : 0;
   const holders = DISTRIBUTORS.map(d => ({ d, q: (S.shop[d.id][sku] || {}).qty })).filter(x => x.q != null);
   return `${panelHead(esc(p.name), `${p.sku} · ${esc(p.category)}`)}<div class="panel-body">
-    <div class="row wrap" style="margin-bottom:10px">${p.archived ? badge('neutral', 'Archived') : stockBadge(st)}</div>
+    <div class="row wrap" style="margin-bottom:10px">${p.archived ? badge('neutral', 'Archived') : stockBadge(st)}${p.archived ? '' : `<span class="grow"></span><span class="muted small">Stock</span>${stepperHtml(p)}`}</div>
     <p style="margin-bottom:6px">${esc(p.desc)}</p>
     <dl style="margin:0"><div class="kv"><dt>Brand</dt><dd>${esc(p.brand)}</dd></div><div class="kv"><dt>Supplier</dt><dd>${esc(p.supplier)}</dd></div><div class="kv"><dt>Unit price</dt><dd>${peso(p.price)} per ${p.unit.toLowerCase()}</dd></div><div class="kv"><dt>Cost price</dt><dd>${peso(p.cost)}</dd></div><div class="kv"><dt>Margin</dt><dd>${margin.toFixed(1)}% (${peso(p.price - p.cost)} per ${p.unit.toLowerCase()})</dd></div><div class="kv"><dt>In stock</dt><dd>${p.stock} ${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'}</dd></div><div class="kv"><dt>Reorder point</dt><dd>${p.rop}</dd></div><div class="kv"><dt>Stock value</dt><dd>${peso(p.stock * p.cost)} at cost · ${peso(p.stock * p.price)} at price</dd></div></dl>
     <div class="sec-title">Held by distributors</div>${holders.length ? holders.map(h => `<div class="list-row">${avatar(h.d.name, 'sm')}<span class="grow">${esc(h.d.name)}<span class="muted small" style="display:block">${esc(h.d.shop)}</span></span><b>${h.q}</b></div>`).join('') : '<p class="muted">No distributor tracks this product yet.</p>'}
-  </div><div class="panel-foot">${p.archived ? `<button class="btn" data-act="restore-close" data-sku="${sku}">Restore</button>` : `<button class="btn" data-act="arch-ask" data-sku="${sku}">${icon('archive')} Archive</button><button class="btn" data-act="sold" data-sku="${sku}" ${p.stock < 1 ? 'disabled' : ''}>${icon('tag')} Sold</button><button class="btn" data-act="adj" data-sku="${sku}">${icon('sliders')} Edit stock count</button><button class="btn primary" data-act="prod-edit" data-sku="${sku}">${icon('edit')} Edit</button>`}</div>`;
+  </div><div class="panel-foot">${p.archived ? `<button class="btn" data-act="restore-close" data-sku="${sku}">Restore</button>` : `<button class="btn" data-act="arch-ask" data-sku="${sku}">${icon('archive')} Archive</button><button class="btn" data-act="sold" data-sku="${sku}" ${p.stock < 1 ? 'disabled' : ''}>${icon('tag')} Sold</button><button class="btn primary" data-act="prod-edit" data-sku="${sku}">${icon('edit')} Edit</button>`}</div>`;
 }
 ACTS['restore-close'] = (d) => { ACTS.restore(d); ACTS['ov-close'](); };
 
-/* ---- Adjust stock ---- */
-let ADJ_ERR = '';
-function adjustHtml(sku) {
-  const p = prod(sku), mode = FORM.mode || 'add', qty = parseInt(FORM.qty, 10);
-  const next = isNaN(qty) ? p.stock : mode === 'add' ? p.stock + qty : mode === 'remove' ? Math.max(0, p.stock - qty) : qty;
-  return `${panelHead('Edit stock count', `${esc(p.name)} · ${p.sku}`)}<div class="panel-body">
-    <div class="alert info">${icon('info')}<span>Currently <b>${p.stock}</b> ${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'} in stock, reorder at ${p.rop}.</span></div>
-    <div class="lbl">Adjustment</div><div class="seg block" style="margin-bottom:14px">${[['add', 'Add'], ['remove', 'Remove'], ['set', 'Set to']].map(([v, l]) => `<button type="button" class="${mode === v ? 'on' : ''}" data-act="fset" data-k="mode" data-v="${v}">${l}</button>`).join('')}</div>
-    ${field('Quantity', fi('qty', { type: 'number', min: 0, ph: '0' }), { err: ADJ_ERR })}
-    ${field('Reason', fs('reason', ['Received shipment', 'Cycle count correction', 'Damaged or lost', 'Other']))}
-    <div class="alert ${stockStatus(next, p.rop) === 'in' ? 'ok' : stockStatus(next, p.rop) === 'low' ? 'warn' : 'err'}">${icon('info')}<span>New stock: <b>${next}</b> · ${STOCK_LABEL[stockStatus(next, p.rop)]}</span></div>
-  </div><div class="panel-foot"><button class="btn" data-act="ov-close">Cancel</button><button class="btn primary" data-act="adj-save" data-sku="${sku}">Save stock count</button></div>`;
+/* ---- Stock count: edited right in the table (up/down buttons or type), saved immediately ---- */
+const stepperHtml = (p) => `<div class="stepper" role="group" aria-label="Stock of ${esc(p.name)}"><button type="button" data-act="stk" data-sku="${p.sku}" data-d="-1" ${p.stock < 1 ? 'disabled' : ''} aria-label="Decrease stock">${icon('minus', 14)}</button><input type="number" min="0" inputmode="numeric" data-stk="${p.sku}" value="${p.stock}" aria-label="Stock count for ${esc(p.name)}"><button type="button" data-act="stk" data-sku="${p.sku}" data-d="1" aria-label="Increase stock">${icon('plus', 14)}</button></div><span class="muted small stk-unit">${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'}</span>`;
+function setStock(sku, n) {
+  const p = prod(sku); n = Math.max(0, Math.round(n)); if (isNaN(n) || n === p.stock) { render(); return; }
+  const was = p.stock; adjustStock(sku, 'set', n); UNDO.setToast(`${p.name}: stock ${was} to ${n}`); render();
 }
-Object.assign(ACTS, {
-  adj: (d) => { ADJ_ERR = ''; Object.assign(FORM, { mode: 'add', qty: '', reason: 'Received shipment' }); openOv(() => adjustHtml(d.sku), { size: 'sm', back: keepBack() }); },
-  'adj-save': (d) => {
-    const q = parseInt(FORM.qty, 10); if (isNaN(q) || q < 0) { ADJ_ERR = 'Enter a quantity of 0 or more.'; paintOv(); return; }
-    const p = prod(d.sku); adjustStock(d.sku, FORM.mode || 'add', q); ADJ_ERR = '';
-    closeOv();
-    toast(`${p.name}: now ${p.stock} in stock`, 'ok'); render();
-  }
+ACTS.stk = (d) => setStock(d.sku, prod(d.sku).stock + +d.d);
+document.addEventListener('change', (e) => {
+  const t = e.target; if (!t.dataset || !t.dataset.stk) return;
+  const v = parseInt(t.value, 10); if (isNaN(v) || v < 0) { t.value = prod(t.dataset.stk).stock; return; }
+  UNDO.run('stk', () => setStock(t.dataset.stk, v));
 });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.dataset && e.target.dataset.stk) e.target.blur(); });
 
 /* ---- Sold outside the B2B system ---- */
 let SOLD_ERR = '';
+const unitsOf = (p, n) => n === 1 ? p.unit.toLowerCase() : /(x|s|ch|sh)$/i.test(p.unit) ? p.unit.toLowerCase() + 'es' : p.unit.toLowerCase() + 's';
+function soldSummary(sku) {
+  const p = prod(sku), q = parseInt(FORM.soldqty, 10), ok = q >= 1 && q <= p.stock, next = ok ? p.stock - q : p.stock;
+  const err = SOLD_ERR && !ok ? `<div class="err" role="alert">${SOLD_ERR}</div>` : '';
+  return `<div id="sold-sum">${err}<div class="alert ${ok ? (stockStatus(next, p.rop) === 'in' ? 'ok' : stockStatus(next, p.rop) === 'low' ? 'warn' : 'err') : 'info'}" style="margin-top:12px">${icon('info')}<span>${ok ? `Sale value <b>${peso(q * p.price)}</b> · stock goes from <b>${p.stock}</b> to <b>${next}</b> (${STOCK_LABEL[stockStatus(next, p.rop)]})` : 'Enter how many were sold to see the new stock.'}</span></div></div>`;
+}
 function soldHtml(sku) {
-  const p = prod(sku), q = parseInt(FORM.soldqty, 10), ok = q >= 1 && q <= p.stock, next = ok ? p.stock - q : p.stock, u = p.unit.toLowerCase();
+  const p = prod(sku), q = parseInt(FORM.soldqty, 10) || 0;
   return `${panelHead('Record a sale', `${esc(p.name)} · ${p.sku}`)}<div class="panel-body">
     <div class="alert info">${icon('info')}<span>For items sold outside the distributor system, such as walk-in or online customers. This counts as a <b>retail sale</b> in Reports and lowers your stock.</span></div>
-    <div class="kv"><div><span>Price per ${u}</span><b>${peso(p.price)}</b></div><div><span>In stock now</span><b>${p.stock} ${p.stock === 1 ? u : /(x|s|ch|sh)$/.test(u) ? u + 'es' : u + 's'}</b></div></div>
-    ${field('Quantity sold', `<input class="input ${SOLD_ERR && !ok ? 'bad' : ''}" id="f_soldqty" data-form="soldqty" data-live type="number" min="1" max="${p.stock}" inputmode="numeric" placeholder="0" value="${esc(FORM.soldqty ?? '')}">`, { err: ok ? '' : SOLD_ERR })}
-    <div class="alert ${ok ? (stockStatus(next, p.rop) === 'in' ? 'ok' : stockStatus(next, p.rop) === 'low' ? 'warn' : 'err') : 'info'}">${icon('info')}<span>${ok ? `Sale value <b>${peso(q * p.price)}</b> · stock goes from <b>${p.stock}</b> to <b>${next}</b> (${STOCK_LABEL[stockStatus(next, p.rop)]})` : 'Enter how many were sold to see the new stock.'}</span></div>
+    <div class="kv"><div><span>Price per ${p.unit.toLowerCase()}</span><b>${peso(p.price)}</b></div><div><span>In stock now</span><b>${p.stock} ${unitsOf(p, p.stock)}</b></div></div>
+    <div class="field"><label for="f_soldqty">Quantity sold</label><div class="stepper lg" role="group" aria-label="Quantity sold"><button type="button" data-act="sold-step" data-sku="${sku}" data-d="-1" aria-label="Decrease quantity">${icon('minus', 16)}</button><input class="input" id="f_soldqty" data-form="soldqty" data-live="sold" data-sku="${sku}" type="number" min="1" max="${p.stock}" inputmode="numeric" placeholder="0" value="${q || ''}"><button type="button" data-act="sold-step" data-sku="${sku}" data-d="1" aria-label="Increase quantity">${icon('plus', 16)}</button></div></div>
+    ${soldSummary(sku)}
   </div><div class="panel-foot"><button class="btn" data-act="ov-close">Cancel</button><button class="btn primary" data-act="sold-save" data-sku="${sku}">Confirm sale</button></div>`;
 }
+/* update only the summary and number while typing or stepping, so the dialog does not redraw */
+LIVE.sold = (sku) => { const el = $('#sold-sum'); if (el) el.outerHTML = soldSummary(sku); };
 Object.assign(ACTS, {
+  'sold-step': (d) => {
+    const p = prod(d.sku), cur = parseInt(FORM.soldqty, 10) || 0, n = Math.max(0, Math.min(p.stock, cur + +d.d));
+    FORM.soldqty = n ? String(n) : ''; const inp = $('#f_soldqty'); if (inp) inp.value = FORM.soldqty;
+    SOLD_ERR = ''; LIVE.sold(d.sku); HIST.record('soldqty');
+  },
   sold: (d) => { SOLD_ERR = ''; FORM.soldqty = ''; openOv(() => soldHtml(d.sku), { size: 'sm', back: keepBack() }); },
   'sold-save': (d) => {
     const p = prod(d.sku), q = parseInt(FORM.soldqty, 10);

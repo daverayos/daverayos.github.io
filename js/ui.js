@@ -121,6 +121,7 @@ const sw = (key, on, label, desc) => `<div class="pref"><div><b>${label}</b>${de
 
 /* ---------- Overlays: centered modal on desktop, bottom sheet on phones ---------- */
 let OV = null;
+const LIVE = {};   // dialogs that update in place while you type (see undo.js)
 const PAGE_FORM_KEYS = /^(rsku|rqty|rreason|paym|rnote|paydue|payagree|payerr|calm|pdq|sname|semail|scompany|saddr|slang|msg|email|pw)$/;   // page-level form values survive opening and closing an overlay
 function openOv(fn, o = {}) { OV = { fn, kind: o.kind || 'modal', size: o.size || '', back: o.back }; paintOv(true); document.body.classList.add('lock'); }
 const keepBack = () => (OV ? OV.back : undefined);

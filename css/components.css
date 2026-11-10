@@ -369,3 +369,22 @@ button.list-row:hover, a.list-row:hover { background: #fcfbf7; }
 .acts .btn.sm { padding: 0 10px; }
 .acts { flex-wrap: wrap; justify-content: flex-end; }
 [hidden] { display: none !important; }
+
+/* stock stepper */
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+.stepper button { width: 30px; height: 34px; border: 0; background: var(--neutral-bg); cursor: pointer; display: grid; place-items: center; color: inherit; }
+.stepper button:hover:not(:disabled) { background: var(--gold-l); }
+.stepper button:disabled { opacity: .35; cursor: not-allowed; }
+.stepper input { width: 52px; height: 34px; border: 0; border-left: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; font: inherit; font-weight: 800; -moz-appearance: textfield; background: #fff; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input:focus { outline: 2px solid var(--gold); outline-offset: -2px; }
+.stk-unit { display: block; margin-top: 4px; }
+
+/* actions in one row, never squeezed */
+.acts { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.acts > * { flex-shrink: 0; }
+.stepper.lg { display: flex; width: 100%; max-width: 280px; }
+.stepper.lg button { width: 44px; height: 44px; }
+.stepper.lg input { flex: 1; min-width: 0; height: 44px; border-radius: 0; border-top: 0; border-bottom: 0; text-align: center; font-weight: 800; font-size: 18px; -moz-appearance: textfield; }
+.stepper.lg input::-webkit-outer-spin-button, .stepper.lg input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+@media (max-width: 1599px) and (min-width: 1025px) { .hide-xl { display: none; } }
