@@ -268,7 +268,7 @@ function withPayments(orders) {
   const cycle = ['cod', 'ewallet', 'bank'], wallets = ['GCash', 'Maya', 'GrabPay'], ymdOf = (at) => { const x = new Date(at); return x.getFullYear() + String(x.getMonth() + 1).padStart(2, '0') + String(x.getDate()).padStart(2, '0'); };
   let seq = 0;
   [...orders].reverse().forEach((o, i) => {
-    const [method = cycle[i % 3], force] = fixed[o.id] || [], total = Math.round(o.items.reduce((s, x) => s + x.qty * x.price, 0) * 1.12 * 100) / 100;
+    const [method = cycle[i % 3], force] = fixed[o.id] || [], total = Math.round(o.items.reduce((s, x) => s + x.qty * x.price, 0) * 100) / 100;
     const delivered = o.history.find(h => h.status === 'Delivered'), tx = [];
     const add = (at, detail, status, m = method) => tx.push({ id: 'TXN-' + ymdOf(at) + '-' + String(++seq).padStart(4, '0'), at, method: m, detail, amount: total, status });
     let status;

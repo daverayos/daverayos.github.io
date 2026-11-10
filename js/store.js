@@ -17,8 +17,8 @@ const pStatus = (p) => stockStatus(p.stock, p.rop);
 const sev = { out: 0, low: 1, in: 2 };
 
 const orderSub = (o) => o.items.reduce((s, i) => s + i.qty * i.price, 0);
-const orderVat = (o) => Math.round(orderSub(o) * VAT * 100) / 100;
-const orderTotal = (o) => orderSub(o) + orderVat(o);
+const orderVat = (o) => Math.round(orderSub(o) * VAT / (1 + VAT) * 100) / 100; // 12/112 of the displayed price
+const orderTotal = (o) => orderSub(o); // displayed prices already include the 12% VAT
 const orderUnits = (o) => o.items.reduce((s, i) => s + i.qty, 0);
 
 const myOrders = () => S.orders.filter(o => o.dist === ME_DIST);
@@ -114,8 +114,8 @@ const cartRemove = (sku) => { S.cart = S.cart.filter(c => c.sku !== sku); };
 const cartCount = () => S.cart.reduce((n, c) => n + c.qty, 0);
 function cartTotals(lines = S.cart) {
   const sub = lines.reduce((s, c) => s + c.qty * prod(c.sku).price, 0);
-  const vat = Math.round(sub * VAT * 100) / 100;
-  return { sub, vat, total: sub + vat };
+  const vat = Math.round(sub * VAT / (1 + VAT) * 100) / 100;
+  return { sub, vat, total: sub }; // VAT is part of the displayed price, not added on top
 }
 function suggestQty(sku) {
   const r = (S.shop[ME_DIST] || {})[sku];

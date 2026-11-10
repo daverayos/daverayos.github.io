@@ -46,7 +46,7 @@ function reorderHtml(sku) {
     ${r ? `<div class="alert ${r.qty <= 0 ? 'err' : 'warn'}" style="margin-top:12px">${icon('alert')}<span>At your shop: <b>${r.qty}</b> on hand, reorder at ${r.rop}.</span></div>` : ''}
     <div class="row" style="justify-content:space-between;margin:14px 0"><span class="lbl" style="margin:0">Quantity</span>${qtyStepper('ro:' + sku, q, maxQty(sku), false)}</div>
     ${q >= maxQty(sku) ? `<p class="small muted" style="margin:-6px 0 10px">Maximum available from BilMagic: ${maxQty(sku)}.</p>` : ''}
-    <div class="totals"><div><span>Subtotal</span><span>${peso(t.sub)}</span></div><div><span>VAT (12%)</span><span>${peso(t.vat)}</span></div><div class="t"><span>Total</span><span>${peso(t.total)}</span></div></div>
+    <div class="totals"><div><span>Price of items</span><span>${peso(t.sub)}</span></div><div><span>VAT (12%) included in price</span><span>${peso(t.vat)}</span></div><div class="t"><span>Total</span><span>${peso(t.total)}</span></div></div>
   </div><div class="panel-foot"><button class="btn" data-act="ro-cart" data-sku="${sku}">${icon('cart', 16)} Add to cart</button><button class="btn gold" data-act="ro-place" data-sku="${sku}">Place order now</button></div>`;
 }
 QTY.ro = (sku, v) => { FORM.rq = clamp(v, 1, maxQty(sku) || 1); paintOv(); };
@@ -78,7 +78,7 @@ PAGES.d.product = (r) => {
   return `${backLink('#/d/catalog', 'Catalog')}
   <div class="grid-2"><section class="card"><div class="tile xl">${catIcon(p.category)}</div></section>
   <section class="card"><div class="row wrap" style="margin-bottom:8px">${availLabel(p)}<span class="muted small">${p.sku}</span></div><h1 style="font-size:24px;font-weight:800;letter-spacing:-.02em">${esc(p.name)}</h1><p class="muted" style="margin:6px 0 14px">${esc(p.brand)} · ${esc(p.category)}</p><p>${esc(p.desc)}</p>
-    <div class="big-num" style="margin:16px 0 4px">${peso(p.price)}</div><div class="muted small">per ${p.unit.toLowerCase()} · wholesale · VAT added at checkout</div>
+    <div class="big-num" style="margin:16px 0 4px">${peso(p.price)}</div><div class="muted small">per ${p.unit.toLowerCase()} · wholesale · VAT included in the price</div>
     <dl style="margin:16px 0 0"><div class="kv"><dt>Supplier</dt><dd>${esc(p.supplier)}</dd></div><div class="kv"><dt>Available</dt><dd>${p.stock} ${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'} at BilMagic</dd></div><div class="kv"><dt>At your shop</dt><dd>${shop ? `${shop.qty} on hand · reorder at ${shop.rop} ${stockBadge(stockStatus(shop.qty, shop.rop))}` : 'Not tracked yet'}</dd></div></dl>
     ${p.stock > 0 ? `<div class="row wrap" style="margin-top:18px">${qtyStepper('pd:' + p.sku, q, maxQty(p.sku), false)}<button class="btn gold lg grow" data-act="pd-add" data-sku="${p.sku}">${icon('cart', 18)} Add to cart · ${peso(p.price * q)}</button></div><button class="btn block" style="margin-top:10px" data-act="reorder" data-sku="${p.sku}">Reorder now</button>` : `<div class="alert err" style="margin-top:18px">${icon('alert')}<span>This item is out of stock at BilMagic. Message the supplier to ask about restock.</span></div><button class="btn block" data-act="ask-restock" data-sku="${p.sku}">${icon('chat', 16)} Ask about restock</button>`}
   </section></div>`;
@@ -96,7 +96,7 @@ PAGES.d.cart = () => {
   return `${pageHead('Cart', `${plural(cartCount(), 'item')} · ${plural(lines.length, 'product')}`, `<button class="btn" data-act="cart-clear">Clear cart</button>`)}
   <div class="grid-2"><section class="card">${lines.map(c => { const p = prod(c.sku); return `<div class="list-row" style="align-items:flex-start;flex-wrap:wrap"><span class="tile">${catIcon(p.category)}</span><span class="grow" style="min-width:160px"><b class="title-sm">${esc(p.name)}</b><span class="muted small" style="display:block">${p.sku} · ${peso(p.price)} each</span>${c.qty >= maxQty(c.sku) ? `<span class="small" style="color:var(--warn);font-weight:600">Maximum available: ${maxQty(c.sku)}</span>` : ''}</span>${qtyStepper('cart:' + c.sku, c.qty, maxQty(c.sku))}<b style="min-width:100px;text-align:right">${peso(c.qty * p.price)}</b><button class="icon-btn sm" data-act="cart-rm" data-sku="${c.sku}" aria-label="Remove ${esc(p.name)}" title="Remove">${icon('trash')}</button></div>`; }).join('')}</section>
   <aside class="card sticky-foot"><div class="card-head"><div><h2>Order summary</h2></div></div>
-    <div class="totals"><div><span>Subtotal</span><span>${peso(t.sub)}</span></div><div><span>VAT (12%)</span><span>${peso(t.vat)}</span></div><div class="t"><span>Total</span><span>${peso(t.total)}</span></div></div>
+    <div class="totals"><div><span>Price of items</span><span>${peso(t.sub)}</span></div><div><span>VAT (12%) included in price</span><span>${peso(t.vat)}</span></div><div class="t"><span>Total</span><span>${peso(t.total)}</span></div></div>
     <div class="sec-title">Deliver to</div><p>${esc(me().shop)}<br><span class="muted">${esc(me().address)}</span></p>
     ${payPicker()}<button class="btn gold lg block" style="margin-top:16px" data-act="cart-place">Place order · ${peso(t.total)}</button><p class="small muted" style="margin-top:10px">Prototype only: payments are simulated. Your order goes to BilMagic as New.</p></aside></div>`;
 };
@@ -137,7 +137,7 @@ PAGES.d.order = (r) => {
   ${pageHead(o.id, `Placed ${fmtDT(o.placed)}`, orderBadge(o.status))}
   <div class="grid-2"><div class="stack"><section class="card"><div class="steps">${steps.map((s, i) => `<div class="s ${o.status === 'Cancelled' ? 'cancel' : i <= idx ? 'done' : ''}"><i></i>${s}</div>`).join('')}</div>${o.status === 'Cancelled' ? `<p class="muted small">Cancelled${o.reason ? ': ' + esc(o.reason) : ''}</p>` : ''}</section>
     <section class="card"><div class="card-head"><div><h2>Items</h2></div></div><div class="line-items">${o.items.map(i => { const p = prod(i.sku); return `<div class="li"><span class="tile">${catIcon(p.category)}</span><div class="grow"><b class="title-sm">${esc(p.name)}</b><div class="muted small">${i.qty} × ${peso(i.price)}</div></div><b>${peso(i.qty * i.price)}</b></div>`; }).join('')}</div>
-    <div class="totals"><div><span>Subtotal</span><span>${peso(orderSub(o))}</span></div><div><span>VAT (12%)</span><span>${peso(orderVat(o))}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div></section></div>
+    <div class="totals"><div><span>Price of items</span><span>${peso(orderSub(o))}</span></div><div><span>VAT (12%) included in price</span><span>${peso(orderVat(o))}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div></section></div>
   <div class="stack"><section class="card"><div class="card-head"><div><h2>Status history</h2></div></div><ul class="timeline">${[...o.history].reverse().map(h => `<li><b>${h.status}</b><span class="muted small">${fmtDT(h.at)}</span></li>`).join('')}</ul></section>
     ${paymentCard(o, 'distributor')}
     <section class="card"><div class="stack">${o.status === 'Delivered' ? `<a class="btn gold" href="#/d/return/new/${o.id}">${icon('undo', 16)} Request a return</a>` : ''}${o.status === 'New' ? `<button class="btn" data-act="d-cancel-ask" data-id="${o.id}">Cancel order</button>` : ''}<button class="btn" data-act="chat-order-d" data-id="${o.id}">${icon('chat', 16)} Message supplier</button><button class="btn" data-act="reorder-order" data-id="${o.id}">${icon('refresh', 16)} Order these items again</button></div>
@@ -248,7 +248,7 @@ PAGES.d.reports = () => {
   const days = getU('drep', 30), m = myReport(days), months = monthlySpend();
   return `${pageHead('Reports', 'Your spend and purchases from BilMagic.', rangeSeg('drep', days))}
   <div class="kpis four">
-    ${kpi({ label: `Spend · ${days} days`, icon: 'trend', val: pesoK(m.spend), sub: 'including 12% VAT' })}
+    ${kpi({ label: `Spend · ${days} days`, icon: 'trend', val: pesoK(m.spend), sub: 'VAT included' })}
     ${kpi({ label: 'Orders placed', icon: 'list', val: m.orders, sub: `${plural(m.units, 'item')} ordered` })}
     ${kpi({ label: 'Average order', icon: 'chart', val: m.orders ? pesoK(m.spend / m.orders) : '–', sub: 'per order' })}
     ${kpi({ label: 'Return requests', icon: 'undo', tone: 'bad', val: m.returns, sub: m.units ? `${(m.returns / m.units * 100).toFixed(1)}% of items ordered` : 'No items ordered' })}

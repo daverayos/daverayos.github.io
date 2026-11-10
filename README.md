@@ -24,7 +24,7 @@ Shared: sign-in, forgot password, sign-out dialog.
 
 ## Business rules in the prototype
 - Stock status (3 tiers): Out of stock at 0, Low stock at or below the reorder point, otherwise In stock.
-- Order total = subtotal + 12% VAT.
+- Displayed prices already include VAT. The order total equals the displayed price; the 12% VAT shown is the part of it that is VAT (price × 12/112) and is not added on top.
 - Supplier "Shipped" deducts supplier stock (blocked when short); "Delivered" adds to the distributor's shop stock.
 - Returns: submitting never restocks. Processing as Good restocks, Damaged goes to separate handling, Reject to rejected.
 - Photos on returns: JPG/PNG/WebP, up to 5 MB, max 3; required when reporting damage.

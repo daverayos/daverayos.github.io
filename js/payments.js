@@ -67,7 +67,7 @@ function receiptHtml(t, o) {
   return `${panelHead(t.status === 'Success' ? 'Payment receipt' : 'Transaction', t.id)}<div class="panel-body">
     <div class="receipt-top"><span class="confirm-ic ${t.status === 'Success' ? 'ok' : t.status === 'Failed' ? 'bad' : 'warn'}">${icon(t.status === 'Success' ? 'check' : t.status === 'Failed' ? 'x' : 'clock', 24)}</span><div class="big-num" style="font-size:30px">${peso(t.amount)}</div>${badge(TXN_CLS[t.status], t.status)}</div>
     <div class="kv"><div><span>Transaction ID</span><b>${t.id}</b></div><div><span>Order</span><b>${o.id}</b></div><div><span>Date</span><b>${fmtDT(t.at)}</b></div><div><span>Method</span><b>${PAY[t.method].label}</b></div><div><span>Details</span><b>${esc(t.detail)}</b></div><div><span>Paid by</span><b>${esc(dist(o.dist).shop)}</b></div></div>
-    <div class="totals"><div><span>Subtotal</span><span>${peso(orderSub(o))}</span></div><div><span>VAT (12%)</span><span>${peso(orderVat(o))}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div>
+    <div class="totals"><div><span>Price of items</span><span>${peso(orderSub(o))}</span></div><div><span>VAT (12%) included in price</span><span>${peso(orderVat(o))}</span></div><div class="t"><span>Total</span><span>${peso(orderTotal(o))}</span></div></div>
     <div class="alert info" style="margin-top:14px">${icon('info')}<span>Simulated transaction for the prototype. No money was moved.</span></div></div>
     <div class="panel-foot"><button class="btn primary" data-act="ov-close">Done</button></div>`;
 }
