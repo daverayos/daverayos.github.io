@@ -10,8 +10,8 @@ const distNeedsRestock = (id) => shopRows(id).filter(r => r.status !== 'in');
 /* ============ Dashboard ============ */
 PAGES.s.dashboard = () => {
   const c = catalog(), out = c.filter(p => pStatus(p) === 'out').length, low = c.filter(p => pStatus(p) === 'low').length;
-  const range = getU('dash_range', 30), st = rangeStats(range);
-  const pts = rangeSeries(range).map(d => ({ label: fmtD(d.date), value: d.value }));
+  const range = getU('dash_range', 30), st = rangeStats(range, 'total'), stW = rangeStats(range, 'wholesale'), stR = rangeStats(range, 'retail');
+  const pts = rangeSeries(range, 'total').map(d => ({ label: fmtD(d.date), value: d.value }));
   const alerts = c.filter(p => pStatus(p) !== 'in').sort((a, b) => sev[pStatus(a)] - sev[pStatus(b)] || a.stock / (a.rop || 1) - b.stock / (b.rop || 1));
   const open = S.orders.filter(o => ['Processing', 'Shipped'].includes(o.status)).length;
   const needs = DISTRIBUTORS.filter(d => distNeedsRestock(d.id).length).length;
@@ -27,9 +27,10 @@ PAGES.s.dashboard = () => {
   </div>
   ${paymentsCard()}
   <div class="grid-2">
-    <section class="card gold" aria-label="Wholesale order trend">
-      <div class="card-head"><div><h2>Wholesale order trend</h2><p>Order value per day, in thousands of pesos</p></div>${rangeSeg('dash_range', range)}</div>
+    <section class="card gold" aria-label="Total sales">
+      <div class="card-head"><div><h2>Total sales</h2><p>Wholesale plus retail, per day, in thousands of pesos</p></div>${rangeSeg('dash_range', range)}</div>
       <div class="row wrap" style="gap:12px"><span class="big-num" title="${peso(st.total)}">${pesoK(st.total)}</span>${st.delta != null ? `<span class="chip-up ${st.delta < 0 ? 'down' : ''}">${st.delta >= 0 ? '+' : ''}${st.delta.toFixed(1)}% vs previous ${range} days</span>` : '<span class="chip-up">No earlier period to compare</span>'}</div>
+      <p class="small" style="margin:6px 0 0;color:inherit"><b>${pesoK(stW.total)}</b> wholesale · <b>${pesoK(stR.total)}</b> retail · <a href="#/s/reports" style="text-decoration:underline">See each in Reports</a></p>
       ${lineChart(pts)}
     </section>
     <section class="card" aria-label="Low-stock alerts">
@@ -40,7 +41,7 @@ PAGES.s.dashboard = () => {
   <div class="grid-3">
     <section class="card"><div class="card-head"><div><h2>Stock level by category</h2><p>SKUs by stock status</p></div></div>${legend3()}${cats.map(x => `<div class="bar-row"><span class="nm" title="${esc(x.cat)}">${esc(x.cat)}</span>${stackBar(x.i, x.l, x.o)}<span class="ct">${x.n}</span></div>`).join('')}</section>
     <section class="card"><div class="card-head"><div><h2>Distributor stock counts</h2><p>Tracked items per distributor, by status</p></div><a class="link" href="#/s/distributors">Open</a></div>${legend3()}${DISTRIBUTORS.map(d => { const r = shopRows(d.id); return `<div class="bar-row"><span class="nm">${esc(d.name.split(' ')[0])}</span>${stackBar(r.filter(x => x.status === 'in').length, r.filter(x => x.status === 'low').length, r.filter(x => x.status === 'out').length)}<span class="ct">${r.length}</span></div>`; }).join('')}</section>
-    <section class="card"><div class="card-head"><div><h2>Recent orders</h2><p>Latest wholesale order activity</p></div><a class="link" href="#/s/orders">View all</a></div>${[...S.orders].sort((a, b) => b.placed - a.placed).slice(0, 5).map(o => `<button class="list-row" data-act="go" data-to="#/s/orders/${o.id}"><span class="grow" style="min-width:0"><b class="title-sm">${o.id}</b><span class="muted small ellipsis" style="display:block">${esc(dist(o.dist).name.split(' ')[0])} · ${fmtDT(o.placed)}</span></span><span class="right"><b style="display:block">${peso(orderTotal(o))}</b>${orderBadge(o.status)}</span></button>`).join('')}</section>
+    <section class="card"><div class="card-head"><div><h2>Recent orders</h2><p>Latest wholesale order activity</p></div><a class="link" href="#/s/orders">View all</a></div>${[...S.orders].sort((a, b) => b.placed - a.placed).slice(0, 5).map(o => `<button class="list-row" data-act="go" data-to="#/s/orders/${o.id}"><span class="grow" style="min-width:0"><b class="title-sm">${o.id}</b><span class="muted small ellipsis" style="display:block">${esc(dist(o.dist).name.split(' ')[0])} · ${fmtDT(o.placed)}</span></span><span class="right"><b style="display:block">${peso(orderTotal(o))}</b>${orderBadges(o)}</span></button>`).join('')}</section>
   </div>`;
 };
 ACTS['inv-needs'] = () => { S.ui.inv_status = 'needs'; S.ui.inv_q = ''; S.ui.inv_cat = 'All'; go('#/s/inventory'); };
@@ -65,7 +66,7 @@ PAGES.s.inventory = (r) => {
       <td data-label="Category" class="hide-t">${esc(p.category)}</td><td data-label="Supplier" class="hide-t">${esc(p.supplier)}</td>
       <td data-label="Price" class="num">${peso(p.price)}</td><td data-label="Stock" class="num"><span><b>${p.stock}</b> <span class="muted small">${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'}</span></span></td><td data-label="Reorder at" class="num hide-t">${p.rop}</td>
       <td data-label="Status">${arch ? badge('neutral', 'Archived') : stockBadge(s)}</td>
-      <td data-label=""><div class="acts">${arch ? `<button class="btn sm" data-act="restore" data-sku="${p.sku}">Restore</button>` : `<button class="icon-btn sm" data-act="adj" data-sku="${p.sku}" aria-label="Adjust stock for ${esc(p.name)}" title="Adjust stock">${icon('sliders')}</button><button class="icon-btn sm" data-act="prod-edit" data-sku="${p.sku}" aria-label="Edit ${esc(p.name)}" title="Edit">${icon('edit')}</button><button class="icon-btn sm" data-act="arch-ask" data-sku="${p.sku}" aria-label="Archive ${esc(p.name)}" title="Archive">${icon('archive')}</button>`}</div></td></tr>`; }).join('')}</tbody></table></div><div class="tbl-foot">Showing ${rows.length} of ${arch ? S.products.filter(p => p.archived).length : c.length} ${arch ? 'archived ' : ''}products</div>` : empty('search', 'No products match', 'Try a different search or clear the filters.', `<button class="btn" data-act="inv-clear">Clear filters</button>`);
+      <td data-label=""><div class="acts">${arch ? `<button class="btn sm" data-act="restore" data-sku="${p.sku}">Restore</button>` : `<button class="btn sm" data-act="sold" data-sku="${p.sku}" ${p.stock < 1 ? 'disabled' : ''} aria-label="Record a sale of ${esc(p.name)}" title="Sold outside the system">${icon('tag', 14)} Sold</button><button class="btn sm" data-act="adj" data-sku="${p.sku}" aria-label="Edit stock count for ${esc(p.name)}" title="Edit stock count">${icon('sliders', 14)} Stock count</button><button class="icon-btn sm" data-act="prod-edit" data-sku="${p.sku}" aria-label="Edit ${esc(p.name)}" title="Edit">${icon('edit')}</button><button class="icon-btn sm" data-act="arch-ask" data-sku="${p.sku}" aria-label="Archive ${esc(p.name)}" title="Archive">${icon('archive')}</button>`}</div></td></tr>`; }).join('')}</tbody></table></div><div class="tbl-foot">Showing ${rows.length} of ${arch ? S.products.filter(p => p.archived).length : c.length} ${arch ? 'archived ' : ''}products</div>` : empty('search', 'No products match', 'Try a different search or clear the filters.', `<button class="btn" data-act="inv-clear">Clear filters</button>`);
   const out = c.filter(p => pStatus(p) === 'out').length, low = c.filter(p => pStatus(p) === 'low').length;
   return `${pageHead('Inventory', `${plural(c.length, 'SKU')} · ${out} out of stock · ${low} low stock · prices in Philippine peso`, `<button class="btn" data-act="inv-arch">${icon('archive')} ${arch ? 'Back to active' : 'Archived (' + S.products.filter(p => p.archived).length + ')'}</button><button class="btn primary" data-act="prod-new">${icon('plus')} Add product</button>`)}
   <div class="toolbar"><div class="input-wrap"><span class="i-left">${icon('search')}</span><input class="input" id="inv_q" data-set="inv_q" type="search" placeholder="Search name, SKU or brand" value="${esc(q)}" aria-label="Search inventory"></div>
@@ -90,7 +91,7 @@ function productDrawer(sku) {
     <p style="margin-bottom:6px">${esc(p.desc)}</p>
     <dl style="margin:0"><div class="kv"><dt>Brand</dt><dd>${esc(p.brand)}</dd></div><div class="kv"><dt>Supplier</dt><dd>${esc(p.supplier)}</dd></div><div class="kv"><dt>Unit price</dt><dd>${peso(p.price)} per ${p.unit.toLowerCase()}</dd></div><div class="kv"><dt>Cost price</dt><dd>${peso(p.cost)}</dd></div><div class="kv"><dt>Margin</dt><dd>${margin.toFixed(1)}% (${peso(p.price - p.cost)} per ${p.unit.toLowerCase()})</dd></div><div class="kv"><dt>In stock</dt><dd>${p.stock} ${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'}</dd></div><div class="kv"><dt>Reorder point</dt><dd>${p.rop}</dd></div><div class="kv"><dt>Stock value</dt><dd>${peso(p.stock * p.cost)} at cost · ${peso(p.stock * p.price)} at price</dd></div></dl>
     <div class="sec-title">Held by distributors</div>${holders.length ? holders.map(h => `<div class="list-row">${avatar(h.d.name, 'sm')}<span class="grow">${esc(h.d.name)}<span class="muted small" style="display:block">${esc(h.d.shop)}</span></span><b>${h.q}</b></div>`).join('') : '<p class="muted">No distributor tracks this product yet.</p>'}
-  </div><div class="panel-foot">${p.archived ? `<button class="btn" data-act="restore-close" data-sku="${sku}">Restore</button>` : `<button class="btn" data-act="arch-ask" data-sku="${sku}">${icon('archive')} Archive</button><button class="btn" data-act="adj" data-sku="${sku}">${icon('sliders')} Adjust stock</button><button class="btn primary" data-act="prod-edit" data-sku="${sku}">${icon('edit')} Edit</button>`}</div>`;
+  </div><div class="panel-foot">${p.archived ? `<button class="btn" data-act="restore-close" data-sku="${sku}">Restore</button>` : `<button class="btn" data-act="arch-ask" data-sku="${sku}">${icon('archive')} Archive</button><button class="btn" data-act="sold" data-sku="${sku}" ${p.stock < 1 ? 'disabled' : ''}>${icon('tag')} Sold</button><button class="btn" data-act="adj" data-sku="${sku}">${icon('sliders')} Edit stock count</button><button class="btn primary" data-act="prod-edit" data-sku="${sku}">${icon('edit')} Edit</button>`}</div>`;
 }
 ACTS['restore-close'] = (d) => { ACTS.restore(d); ACTS['ov-close'](); };
 
@@ -99,13 +100,13 @@ let ADJ_ERR = '';
 function adjustHtml(sku) {
   const p = prod(sku), mode = FORM.mode || 'add', qty = parseInt(FORM.qty, 10);
   const next = isNaN(qty) ? p.stock : mode === 'add' ? p.stock + qty : mode === 'remove' ? Math.max(0, p.stock - qty) : qty;
-  return `${panelHead('Adjust stock', `${esc(p.name)} · ${p.sku}`)}<div class="panel-body">
+  return `${panelHead('Edit stock count', `${esc(p.name)} · ${p.sku}`)}<div class="panel-body">
     <div class="alert info">${icon('info')}<span>Currently <b>${p.stock}</b> ${p.unit.toLowerCase()}${p.stock === 1 ? '' : 's'} in stock, reorder at ${p.rop}.</span></div>
     <div class="lbl">Adjustment</div><div class="seg block" style="margin-bottom:14px">${[['add', 'Add'], ['remove', 'Remove'], ['set', 'Set to']].map(([v, l]) => `<button type="button" class="${mode === v ? 'on' : ''}" data-act="fset" data-k="mode" data-v="${v}">${l}</button>`).join('')}</div>
     ${field('Quantity', fi('qty', { type: 'number', min: 0, ph: '0' }), { err: ADJ_ERR })}
     ${field('Reason', fs('reason', ['Received shipment', 'Cycle count correction', 'Damaged or lost', 'Other']))}
     <div class="alert ${stockStatus(next, p.rop) === 'in' ? 'ok' : stockStatus(next, p.rop) === 'low' ? 'warn' : 'err'}">${icon('info')}<span>New stock: <b>${next}</b> · ${STOCK_LABEL[stockStatus(next, p.rop)]}</span></div>
-  </div><div class="panel-foot"><button class="btn" data-act="ov-close">Cancel</button><button class="btn primary" data-act="adj-save" data-sku="${sku}">Save adjustment</button></div>`;
+  </div><div class="panel-foot"><button class="btn" data-act="ov-close">Cancel</button><button class="btn primary" data-act="adj-save" data-sku="${sku}">Save stock count</button></div>`;
 }
 Object.assign(ACTS, {
   adj: (d) => { ADJ_ERR = ''; Object.assign(FORM, { mode: 'add', qty: '', reason: 'Received shipment' }); openOv(() => adjustHtml(d.sku), { size: 'sm', back: keepBack() }); },
@@ -114,6 +115,28 @@ Object.assign(ACTS, {
     const p = prod(d.sku); adjustStock(d.sku, FORM.mode || 'add', q); ADJ_ERR = '';
     closeOv();
     toast(`${p.name}: now ${p.stock} in stock`, 'ok'); render();
+  }
+});
+
+/* ---- Sold outside the B2B system ---- */
+let SOLD_ERR = '';
+function soldHtml(sku) {
+  const p = prod(sku), q = parseInt(FORM.soldqty, 10), ok = q >= 1 && q <= p.stock, next = ok ? p.stock - q : p.stock, u = p.unit.toLowerCase();
+  return `${panelHead('Record a sale', `${esc(p.name)} · ${p.sku}`)}<div class="panel-body">
+    <div class="alert info">${icon('info')}<span>For items sold outside the distributor system, such as walk-in or online customers. This counts as a <b>retail sale</b> in Reports and lowers your stock.</span></div>
+    <div class="kv"><div><span>Price per ${u}</span><b>${peso(p.price)}</b></div><div><span>In stock now</span><b>${p.stock} ${p.stock === 1 ? u : /(x|s|ch|sh)$/.test(u) ? u + 'es' : u + 's'}</b></div></div>
+    ${field('Quantity sold', `<input class="input ${SOLD_ERR && !ok ? 'bad' : ''}" id="f_soldqty" data-form="soldqty" data-live type="number" min="1" max="${p.stock}" inputmode="numeric" placeholder="0" value="${esc(FORM.soldqty ?? '')}">`, { err: ok ? '' : SOLD_ERR })}
+    <div class="alert ${ok ? (stockStatus(next, p.rop) === 'in' ? 'ok' : stockStatus(next, p.rop) === 'low' ? 'warn' : 'err') : 'info'}">${icon('info')}<span>${ok ? `Sale value <b>${peso(q * p.price)}</b> · stock goes from <b>${p.stock}</b> to <b>${next}</b> (${STOCK_LABEL[stockStatus(next, p.rop)]})` : 'Enter how many were sold to see the new stock.'}</span></div>
+  </div><div class="panel-foot"><button class="btn" data-act="ov-close">Cancel</button><button class="btn primary" data-act="sold-save" data-sku="${sku}">Confirm sale</button></div>`;
+}
+Object.assign(ACTS, {
+  sold: (d) => { SOLD_ERR = ''; FORM.soldqty = ''; openOv(() => soldHtml(d.sku), { size: 'sm', back: keepBack() }); },
+  'sold-save': (d) => {
+    const p = prod(d.sku), q = parseInt(FORM.soldqty, 10);
+    if (isNaN(q) || q < 1) { SOLD_ERR = 'Enter a quantity of 1 or more.'; paintOv(); return; }
+    if (q > p.stock) { SOLD_ERR = `Only ${p.stock} in stock.`; paintOv(); return; }
+    SOLD_ERR = ''; const r = sellProduct(d.sku, q); closeOv();
+    toast(`Sold ${q} × ${p.name} (${peso(r.qty * r.price)}). ${p.stock} left`, 'ok'); render();
   }
 });
 
@@ -166,7 +189,7 @@ PAGES.s.orders = (r) => {
   return `${pageHead('Orders', 'Wholesale orders from distributors. Status moves New, Processing, Shipped, Delivered.')}
   ${dId ? `<div class="row" style="margin-bottom:12px"><span class="badge b-neutral">Distributor: ${esc(dist(dId).name)}</span><button class="link small" data-act="ord-clear">Clear</button></div>` : ''}
   ${tabsRow('ord_tab', tabs, tab)}
-  <div class="card flush">${list.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th>Order ID</th><th>Distributor</th><th class="num">Items</th><th class="num">Total</th><th>Status</th><th class="hide-t">Payment</th><th>Placed</th><th class="right">Action</th></tr></thead><tbody>${list.map(o => `<tr class="click" data-act="go" data-to="#/s/orders/${o.id}"><td class="first"><b>${o.id}</b></td><td data-label="Distributor"><b>${esc(dist(o.dist).name)}</b><div class="muted small">${esc(dist(o.dist).shop)}</div></td><td data-label="Items" class="num">${o.items.length}</td><td data-label="Total" class="num"><b>${peso(orderTotal(o))}</b></td><td data-label="Status">${orderBadge(o.status)}</td><td data-label="Payment" class="hide-t">${payBadge(o)}<div class="muted small">${PAY[o.pay.method].label}</div></td><td data-label="Placed">${fmtDT(o.placed)}</td><td data-label=""><div class="acts"><button class="btn sm">View</button></div></td></tr>`).join('')}</tbody></table></div>` : empty('list', 'No orders here', 'There are no orders with this status yet.')}</div>`;
+  <div class="card flush">${list.length ? `<div class="tbl-wrap"><table class="tbl rt"><thead><tr><th>Order ID</th><th>Distributor</th><th class="num">Items</th><th class="num">Total</th><th>Status</th><th class="hide-t">Payment</th><th>Placed</th><th class="right">Action</th></tr></thead><tbody>${list.map(o => `<tr class="click" data-act="go" data-to="#/s/orders/${o.id}"><td class="first"><b>${o.id}</b></td><td data-label="Distributor"><b>${esc(dist(o.dist).name)}</b><div class="muted small">${esc(dist(o.dist).shop)}</div></td><td data-label="Items" class="num">${o.items.length}</td><td data-label="Total" class="num"><b>${peso(orderTotal(o))}</b></td><td data-label="Status">${orderBadges(o)}</td><td data-label="Payment" class="hide-t">${payBadge(o)}<div class="muted small">${PAY[o.pay.method].label}</div></td><td data-label="Placed">${fmtDT(o.placed)}</td><td data-label=""><div class="acts"><button class="btn sm">View</button></div></td></tr>`).join('')}</tbody></table></div>` : empty('list', 'No orders here', 'There are no orders with this status yet.')}</div>`;
 };
 ACTS['ord-clear'] = () => { S.ui.ord_dist = ''; render(); };
 function orderDrawer(id) {
@@ -174,7 +197,7 @@ function orderDrawer(id) {
   const NEXT_LABEL = { New: 'Accept and start processing', Processing: 'Mark as shipped', Shipped: 'Mark as delivered' };
   const steps = ['New', 'Processing', 'Shipped', 'Delivered'], idx = steps.indexOf(o.status);
   return `${panelHead(o.id, `Placed ${fmtDT(o.placed)}`)}<div class="panel-body">
-    <div class="row wrap" style="margin-bottom:8px">${orderBadge(o.status)}${o.reason ? `<span class="muted small">${esc(o.reason)}</span>` : ''}</div>
+    <div class="row wrap" style="margin-bottom:8px">${orderBadges(o)}${o.reason ? `<span class="muted small">${esc(o.reason)}</span>` : ''}</div>
     <div class="steps" aria-hidden="true">${steps.map((s, i) => `<div class="s ${o.status === 'Cancelled' ? 'cancel' : i <= idx ? 'done' : ''}"><i></i>${s}</div>`).join('')}</div>
     <div class="sec-title">Distributor</div>
     <div class="row">${avatar(d.name)}<div class="grow"><b>${esc(d.name)}</b><div class="muted small">${esc(d.shop)} · ${esc(d.city)}</div></div><button class="btn sm" data-act="chat-order" data-id="${o.id}">${icon('chat', 15)} Message</button></div>
@@ -288,7 +311,7 @@ function chatPage(role, r) {
     const ret = isRetCtx(t.ctx) ? returnById(t.ctx) : null, o = !ret && t.ctx !== 'General' ? orderById(t.ctx) : null;
     const viewRoute = role === 'supplier' ? '#/s/orders/' : '#/d/order/';
     conv = `<div class="conv-head"><button class="icon-btn sm show-m" data-act="chat-back" aria-label="Back to conversations">${icon('left')}</button>${avatar(other(t), 'sm')}<div class="grow"><b>${esc(other(t))}</b><div class="muted small">${role === 'supplier' ? esc(dist(t.dist).shop) : 'Supplier'}</div></div></div>
-      ${ret ? `<div class="pinned"><span class="lbl">Return</span><b>${ret.id}</b>${returnBadge(ret.status)}<span class="small muted">${ret.qty} × ${esc(prod(ret.sku).name)}</span>${role === 'supplier' ? `<a class="btn sm" style="margin-left:auto" href="#/s/returns/${ret.id}">View return</a>` : `<button class="btn sm" style="margin-left:auto" data-act="open-return" data-id="${ret.id}">View return</button>`}</div>` : o ? `<div class="pinned"><span class="lbl">Order</span><b>${o.id}</b>${orderBadge(o.status)}<span class="small muted">${peso(orderTotal(o))}</span><a class="btn sm" style="margin-left:auto" href="${viewRoute}${o.id}">View order</a></div>` : `<div class="pinned"><span class="lbl">General conversation</span><span class="small muted">Not linked to an order</span></div>`}
+      ${ret ? `<div class="pinned"><span class="lbl">Return</span><b>${ret.id}</b>${returnBadge(ret.status)}<span class="small muted">${ret.qty} × ${esc(prod(ret.sku).name)}</span>${role === 'supplier' ? `<a class="btn sm" style="margin-left:auto" href="#/s/returns/${ret.id}">View return</a>` : `<button class="btn sm" style="margin-left:auto" data-act="open-return" data-id="${ret.id}">View return</button>`}</div>` : o ? `<div class="pinned"><span class="lbl">Order</span><b>${o.id}</b>${orderBadges(o)}<span class="small muted">${peso(orderTotal(o))}</span><a class="btn sm" style="margin-left:auto" href="${viewRoute}${o.id}">View order</a></div>` : `<div class="pinned"><span class="lbl">General conversation</span><span class="small muted">Not linked to an order</span></div>`}
       <div class="msgs" aria-live="polite">${t.msgs.length ? t.msgs.map(m => msgHtml(m, role)).join('') : `<div class="empty-conv">No messages yet. Say hello.</div>`}</div>
       <form class="composer" data-submit="chat" novalidate><input id="f_msg" data-form="msg" value="${esc(FORM.msg || '')}" placeholder="Write a message" aria-label="Message" autocomplete="off"><button class="btn primary" type="submit">${icon('send', 16)} <span class="hide-m">Send</span></button></form>`;
   }
@@ -311,8 +334,10 @@ SUBMIT.chat = () => {
 
 /* ============ Reports ============ */
 PAGES.s.reports = () => {
-  const range = getU('rep_range', 30), st = rangeStats(range), val = stockValue();
-  const pts = rangeSeries(range).map(d => ({ label: fmtD(d.date), value: d.value }));
+  const range = getU('rep_range', 30), st = rangeStats(range, 'total'), stW = rangeStats(range, 'wholesale'), stR = rangeStats(range, 'retail'), val = stockValue();
+  const mk = (kind) => rangeSeries(range, kind).map(d => ({ label: fmtD(d.date), value: d.value }));
+  const chip = (x) => x.delta != null ? `<span class="chip-up ${x.delta < 0 ? 'down' : ''}">${x.delta >= 0 ? '+' : ''}${x.delta.toFixed(1)}%</span>` : '';
+  const retailLog = [...S.retail.log].sort((a, b) => b.at - a.at).slice(0, 6);
   const top = topSellers(range, 5), c = catalog();
   const crit = c.filter(p => pStatus(p) !== 'in').sort((a, b) => sev[pStatus(a)] - sev[pStatus(b)]).slice(0, 8);
   const byCat = categories().map(cat => ({ cat, v: c.filter(p => p.category === cat).reduce((s, p) => s + p.stock * p.cost, 0) })).filter(x => x.v).sort((a, b) => b.v - a.v);
@@ -320,14 +345,19 @@ PAGES.s.reports = () => {
   const orders = S.orders.filter(o => o.status !== 'Cancelled' && o.placed >= now() - range * 864e5);
   return `${pageHead('Reports', 'Sales and stock health. All figures are synthetic sample data.', rangeSeg('rep_range', range))}
   <div class="kpis four">
-    ${kpi({ label: `Revenue · ${range} days`, icon: 'trend', val: pesoK(st.total), sub: st.delta != null ? `${st.delta >= 0 ? '+' : ''}${st.delta.toFixed(1)}% vs previous period` : 'No earlier period to compare' })}
+    ${kpi({ label: `Total sales · ${range} days`, icon: 'trend', val: pesoK(st.total), sub: `${pesoK(stW.total)} wholesale · ${pesoK(stR.total)} retail` })}
     ${kpi({ label: 'Average order', icon: 'list', val: orders.length ? peso(orders.reduce((s, o) => s + orderTotal(o), 0) / orders.length) : '–', sub: `${plural(orders.length, 'order')} in this period` })}
     ${kpi({ label: 'Inventory value', icon: 'package', val: pesoK(val.cost), sub: `at cost · ${pesoK(val.retail)} at price` })}
     ${kpi({ label: 'Gross margin on stock', icon: 'chart', tone: 'ok', val: val.margin.toFixed(1) + '%', sub: `${c.filter(p => pStatus(p) === 'in').length} in stock · ${c.filter(p => pStatus(p) === 'low').length} low · ${c.filter(p => pStatus(p) === 'out').length} out` })}
   </div>
+  <section class="card gold" style="margin-bottom:20px"><div class="card-head"><div><h2>Total sales · ${range} days</h2><p>Wholesale plus retail, order value per day</p></div></div><div class="row wrap" style="gap:12px"><span class="big-num">${peso(st.total)}</span>${chip(st)}</div>${lineChart(mk('total'))}</section>
+  <div class="grid-eq">
+    <section class="card"><div class="card-head"><div><h2>Wholesale sales</h2><p>Inside the system: distributor orders</p></div></div><div class="row wrap" style="gap:12px"><span class="big-num">${peso(stW.total)}</span>${chip(stW)}</div>${lineChart(mk('wholesale'))}</section>
+    <section class="card"><div class="card-head"><div><h2>Retail sales</h2><p>Outside the system: recorded with the Sold button</p></div></div><div class="row wrap" style="gap:12px"><span class="big-num">${peso(stR.total)}</span>${chip(stR)}</div>${lineChart(mk('retail'))}</section>
+  </div>
   <div class="grid-2">
-    <section class="card gold"><div class="card-head"><div><h2>Total sales · ${range} days</h2><p>Order value per day</p></div></div><div class="row wrap" style="gap:12px"><span class="big-num">${peso(st.total)}</span>${st.delta != null ? `<span class="chip-up ${st.delta < 0 ? 'down' : ''}">${st.delta >= 0 ? '+' : ''}${st.delta.toFixed(1)}%</span>` : ''}</div>${lineChart(pts)}</section>
     <section class="card"><div class="card-head"><div><h2>Top sellers</h2><p>By sales value, ${range} days</p></div></div>${top.map((t, i) => `<div class="list-row"><span class="rank">${i + 1}</span><span class="grow" style="min-width:0"><b class="title-sm ellipsis" style="display:block">${esc(t.p.name)}</b><span class="muted small">${t.p.sku} · ${plural(t.units, 'unit')}</span></span><b>${peso(t.value)}</b></div>`).join('')}</section>
+    <section class="card"><div class="card-head"><div><h2>Recent retail sales</h2><p>Latest items sold outside the system</p></div></div>${retailLog.length ? retailLog.map(r => `<div class="list-row"><span class="grow" style="min-width:0"><b class="title-sm ellipsis" style="display:block">${esc(prod(r.sku) ? prod(r.sku).name : r.sku)}</b><span class="muted small">${fmtDT(r.at)} · ${r.qty} × ${peso(r.price)}</span></span><b>${peso(r.qty * r.price)}</b></div>`).join('') : '<p class="muted">No retail sales yet. Use Sold in Inventory.</p>'}</section>
   </div>
   <div class="grid-eq">
     <section class="card"><div class="card-head"><div><h2>Stock value by category</h2><p>At cost price</p></div></div>${byCat.map(x => `<div class="bar-row" style="grid-template-columns:130px 1fr 64px"><span class="nm" title="${esc(x.cat)}">${esc(x.cat)}</span><div class="sb"><i style="flex:${x.v};background:var(--black);max-width:${x.v / maxV * 100}%"></i></div><span class="ct">${pesoK(x.v)}</span></div>`).join('')}</section>

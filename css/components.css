@@ -344,3 +344,28 @@ button.list-row:hover, a.list-row:hover { background: #fcfbf7; }
 .paylegend span { color: var(--muted); }
 .kpis .kpi { min-width: 0; }
 @media (max-width: 767px) { .kpis.four .kpi .val { font-size: 21px; overflow-wrap: anywhere; } .kpis.four .kpi { padding: 14px; } }
+
+/* pay later: calendar */
+.later-box { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--neutral-bg); }
+.cal { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; max-width: 340px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal-grid > span { font-size: 12px; color: var(--muted); padding: 4px 0; }
+.cal-grid button { height: 40px; border: 1px solid transparent; border-radius: 10px; background: transparent; font: inherit; cursor: pointer; color: inherit; }
+.cal-grid button:hover:not(:disabled) { border-color: var(--gold); }
+.cal-grid button.today { border-color: var(--line); font-weight: 700; }
+.cal-grid button.on { background: var(--black); color: var(--gold); border-color: var(--black); font-weight: 700; }
+.cal-grid button:disabled { color: #b9b4a3; cursor: not-allowed; text-decoration: line-through; opacity: .55; }
+.later-box .check { margin-top: 12px; }
+.kpis.five { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 1100px) { .kpis.five { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 767px) { .kpis.five .kpi .val { font-size: 21px; overflow-wrap: anywhere; } .kpis.five .kpi { padding: 14px; } }
+.kv { grid-template-columns: 1fr; }
+@media (max-width: 767px) { .kv { grid-template-columns: 1fr; } .kv > div { padding: 10px 12px; } }
+
+/* undo and redo */
+.toast-btn { margin-left: 8px; background: var(--gold); color: #000; border: 0; border-radius: 8px; padding: 5px 12px; font: inherit; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+.acts .btn.sm { padding: 0 10px; }
+.acts { flex-wrap: wrap; justify-content: flex-end; }
+[hidden] { display: none !important; }

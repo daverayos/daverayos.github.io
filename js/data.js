@@ -143,11 +143,16 @@ function buildNotifs() {
       n('sn4', 'return', 'Return RMA-031 submitted', 'Roberto Santos wants to return 2 Solid Oak Triangle Ball Racks.', '2026-10-28T07:50', false, '#/s/returns/RMA-031'),
       n('sn5', 'chat', 'New message from Roberto Santos', 'Understood, thank you. Please prioritize the Apex Pro cues...', '2026-10-28T09:36', false, '#/s/chat/t1'),
       n('sn6', 'order', 'New order BM-2610-0150', "Olivia Bautista placed an order for 2 products.", '2026-10-27T15:10', true, '#/s/orders/BM-2610-0150'),
+      n('sn8', 'order', 'Payment overdue: BM-2610-0141', 'Victoria Reyes is 10 days past the Pay Later due date. Interest is growing.', '2026-10-28T08:05', false, '#/s/orders/BM-2610-0141'),
+      n('sn9', 'order', 'Payment overdue: BM-2610-0142', 'Roberto Santos is 4 days past the Pay Later due date.', '2026-10-28T08:00', false, '#/s/orders/BM-2610-0142'),
+      n('sn10', 'order', 'Pay Later due soon: BM-2610-0148', 'Roberto Santos should pay by Oct 30.', '2026-10-28T07:00', true, '#/s/orders/BM-2610-0148'),
       n('sn7', 'stock', 'Out of stock: Dragon Series House Cue 57"', '0 left, reorder at 15.', '2026-10-26T10:00', true, '#/s/inventory/BIL-CUE-003')
     ],
     distributor: [
       n('dn1', 'chat', 'New message from BilMagic Supply', 'Thanks Roberto. We will review RMA-031 today.', '2026-10-28T08:20', false, '#/d/chat/t2'),
       n('dn2', 'stock', 'Low stock at your shop', 'Velocity Carbon Fiber Cue: 1 left, reorder at 4.', '2026-10-28T07:30', false, '#/d/stock'),
+      n('dn9', 'order', 'Payment overdue: BM-2610-0142', 'This order was due Oct 24. Interest of 2% per day is being added. Pay now to stop it.', '2026-10-28T08:00', false, '#/d/order/BM-2610-0142'),
+      n('dn10', 'order', 'Payment due soon: BM-2610-0148', 'Pay by Oct 30 to avoid late interest.', '2026-10-28T07:00', false, '#/d/order/BM-2610-0148'),
       n('dn3', 'order', 'Order BM-2610-0148 shipped', 'Expected delivery in 1 to 2 days.', '2026-10-27T09:00', false, '#/d/order/BM-2610-0148'),
       n('dn4', 'return', 'Return RMA-029 handled separately', 'Defective item. Not restocked.', '2026-10-25T10:00', true, '#/d/orders/returns'),
       n('dn5', 'order', 'Order BM-2610-0146 delivered', 'Your order was delivered.', '2026-10-26T13:15', true, '#/d/order/BM-2610-0146')
@@ -262,31 +267,47 @@ function withClosedChats(threads, returns, orders) {
   threads.filter(t => t.ctx === 'General').forEach(t => t.msgs.sort((a, b) => a.at - b.at)); // status lines and chat in time order
   return threads;
 }
+/* Retail sales made outside the B2B system: a small steady daily base plus a few logged sales. */
+function buildRetail(P, sales) {
+  const r = rng(11);
+  const daily = sales.daily.map(d => { const wk = new Date(d.date).getDay(); return { date: d.date, value: Math.round(d.value * (0.18 + 0.12 * r()) * (wk === 0 || wk === 6 ? 1.35 : 1)) }; });
+  const pick = [['BIL-CHK-001', 6, '2026-10-26T15:20'], ['BIL-TIP-002', 10, '2026-10-24T11:05'], ['BIL-GLV-001', 2, '2026-10-22T17:40'], ['BIL-CLN-001', 3, '2026-10-19T13:10'], ['BIL-ACC-002', 4, '2026-10-17T10:30'], ['BIL-CHK-002', 5, '2026-10-14T16:15']];
+  const log = pick.filter(x => P.find(p => p.sku === x[0])).map((x, i) => ({ id: 'rs-seed' + (i + 1), sku: x[0], qty: x[1], price: P.find(p => p.sku === x[0]).price, at: ts(x[2]) }));
+  return { daily, log };
+}
 /* dummy payment methods, statuses and transactions for the sample orders */
 function withPayments(orders) {
-  const fixed = { 'BM-2610-0152': ['cod'], 'BM-2610-0151': ['bank'], 'BM-2610-0150': ['cod'], 'BM-2610-0149': ['ewallet'], 'BM-2610-0148': ['bank', 'submitted'], 'BM-2610-0147': ['bank', 'submitted'], 'BM-2610-0146': ['ewallet'], 'BM-2610-0142': ['bank'], 'BM-2609-0139': ['cod'], 'BM-2608-0137': ['ewallet'] };
+  const fixed = { 'BM-2610-0152': ['cod'], 'BM-2610-0151': ['bank'], 'BM-2610-0150': ['cod'], 'BM-2610-0149': ['ewallet'], 'BM-2610-0148': ['later', null, '2026-10-30'], 'BM-2610-0147': ['bank', 'submitted'], 'BM-2610-0146': ['ewallet'], 'BM-2610-0142': ['later', null, '2026-10-24'], 'BM-2610-0141': ['later', null, '2026-10-18'], 'BM-2609-0140': ['later', 'paid', '2026-10-09'], 'BM-2610-0145': ['bank'], 'BM-2609-0139': ['cod'], 'BM-2608-0137': ['ewallet'] };
   const cycle = ['cod', 'ewallet', 'bank'], wallets = ['GCash', 'Maya', 'GrabPay'], ymdOf = (at) => { const x = new Date(at); return x.getFullYear() + String(x.getMonth() + 1).padStart(2, '0') + String(x.getDate()).padStart(2, '0'); };
   let seq = 0;
   [...orders].reverse().forEach((o, i) => {
-    const [method = cycle[i % 3], force] = fixed[o.id] || [], total = Math.round(o.items.reduce((s, x) => s + x.qty * x.price, 0) * 100) / 100;
+    const [method = cycle[i % 3], force, dueStr] = fixed[o.id] || [], total = Math.round(o.items.reduce((s, x) => s + x.qty * x.price, 0) * 100) / 100;
     const delivered = o.history.find(h => h.status === 'Delivered'), tx = [];
     const add = (at, detail, status, m = method) => tx.push({ id: 'TXN-' + ymdOf(at) + '-' + String(++seq).padStart(4, '0'), at, method: m, detail, amount: total, status });
-    let status;
-    if (o.status === 'Cancelled') status = 'void';
+    let status, extra = {};
+    if (method === 'later') {
+      const due = new Date(dueStr + 'T00:00').getTime();
+      extra = { due };
+      if (force === 'paid') {
+        const paidAt = new Date('2026-10-12T14:20').getTime(), late = 3, intr = Math.round(total * 0.02 * late * 100) / 100;
+        tx.push({ id: 'TXN-' + ymdOf(paidAt) + '-' + String(++seq).padStart(4, '0'), at: paidAt, method: 'bank', detail: 'Card ending 4242 \u00b7 3 days late', amount: Math.round((total + intr) * 100) / 100, status: 'Success' });
+        status = 'paid'; Object.assign(extra, { frozen: true, lateDays: late, interest: intr });
+      } else status = 'later';
+    } else if (o.status === 'Cancelled') status = 'void';
     else if (o.status === 'Delivered') {
       status = 'paid';
       if (method === 'cod') add(delivered.at, 'Cash on delivery', 'Success');
       else if (method === 'ewallet') add(o.placed + 45 * 60e3, wallets[i % 3] + ' \u00b7 0917 *** ' + (4200 + i * 37), 'Success');
-      else { if (o.id === 'BM-2610-0142') add(o.placed + 20 * 60e3, 'Card ending 0002', 'Failed'); add(o.placed + 90 * 60e3, i % 2 ? 'Card ending 4242' : 'Bank transfer \u00b7 ref 77' + (4010 + i) + '3', 'Success'); }
+      else { if (o.id === 'BM-2610-0145') add(o.placed + 20 * 60e3, 'Card ending 0002', 'Failed'); add(o.placed + 90 * 60e3, i % 2 ? 'Card ending 4242' : 'Bank transfer \u00b7 ref 77' + (4010 + i) + '3', 'Success'); }
     } else if (force === 'submitted') { status = 'submitted'; add(o.placed + 2 * 3600e3, 'Bank transfer \u00b7 ref 55' + (1200 + i * 7) + '8', 'Pending'); }
     else status = method === 'cod' ? 'cod' : 'unpaid';
-    o.pay = { method, status, txns: tx };
+    o.pay = { method, status, txns: tx, ...extra };
   });
   return orders;
 }
 function seedState() {
   const products = loadProducts();
-  const orders = withPayments(buildOrders(products)), returns = buildReturns();
+  const orders = withPayments(buildOrders(products)), returns = buildReturns(), sales = buildSales(products);
   return {
     role: null,
     products,
@@ -296,7 +317,8 @@ function seedState() {
     threads: withClosedChats(buildThreads(), returns, orders),
     notifs: buildNotifs(),
     cart: [],
-    sales: buildSales(products),
+    sales,
+    retail: buildRetail(products, sales),
     profile: {
       supplier: { name: 'BilMagic Admin', email: 'admin@bilmagic.com', company: 'BilMagic Supply Inc.' },
       distributor: { ...DISTRIBUTORS[0], language: 'English' }

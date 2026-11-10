@@ -121,7 +121,7 @@ const sw = (key, on, label, desc) => `<div class="pref"><div><b>${label}</b>${de
 
 /* ---------- Overlays: centered modal on desktop, bottom sheet on phones ---------- */
 let OV = null;
-const PAGE_FORM_KEYS = /^(rsku|rqty|rreason|paym|rnote|pdq|sname|semail|scompany|saddr|slang|msg|email|pw)$/;   // page-level form values survive opening and closing an overlay
+const PAGE_FORM_KEYS = /^(rsku|rqty|rreason|paym|rnote|paydue|payagree|payerr|calm|pdq|sname|semail|scompany|saddr|slang|msg|email|pw)$/;   // page-level form values survive opening and closing an overlay
 function openOv(fn, o = {}) { OV = { fn, kind: o.kind || 'modal', size: o.size || '', back: o.back }; paintOv(true); document.body.classList.add('lock'); }
 const keepBack = () => (OV ? OV.back : undefined);
 function paintOv(first) {
@@ -131,10 +131,11 @@ function paintOv(first) {
   el.innerHTML = `<div class="ov ${OV.kind === 'drawer' ? 'drawer' : ''}" data-act="ov-bg"><div class="panel ${OV.size}" role="dialog" aria-modal="true" tabindex="-1"><div class="grab"></div>${OV.fn()}</div></div>`;
   const nb = $('.panel-body', el); if (nb && !first) nb.scrollTop = top;
   const target = (aid && document.getElementById(aid)) || (first ? ($('.panel [data-autofocus]', el) || $('.panel .input', el) || $('.panel', el)) : null);
+  if (typeof HIST !== 'undefined') HIST.sync();
   if (target) { target.focus(); if (target.setSelectionRange && aid && target.type !== 'number' && target.type !== 'email') { try { target.setSelectionRange(target.value.length, target.value.length); } catch (e) { } } }
 }
 function closeOv() { const b = OV && OV.back; OV = null; $('#overlay').innerHTML = ''; document.body.classList.remove('lock'); Object.keys(FORM).forEach(k => { if (!PAGE_FORM_KEYS.test(k)) delete FORM[k]; }); if (b) rewriteHash(b); }
-const panelHead = (title, sub) => `<div class="panel-head"><div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div><button class="icon-btn sm" data-act="ov-close" aria-label="Close">${icon('x')}</button></div>`;
+const panelHead = (title, sub) => `<div class="panel-head"><div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div><div class="row" style="gap:6px;flex-shrink:0"><button type="button" class="icon-btn sm" data-act="hist-undo" hidden aria-label="Undo typing" title="Undo typing (Ctrl+Z)">${icon('undo', 16)}</button><button type="button" class="icon-btn sm" data-act="hist-redo" hidden aria-label="Redo typing" title="Redo typing (Ctrl+Shift+Z)">${icon('redo', 16)}</button><button class="icon-btn sm" data-act="ov-close" aria-label="Close">${icon('x')}</button></div></div>`;
 const confirmDlg = ({ ic = 'alert', tone = 'bad', title, text, yes, yesAct, yesData = '', danger }) => `<div class="panel-body" style="padding-top:26px;text-align:center"><div class="confirm-ic ${tone}">${icon(ic, 24)}</div><h2 style="font-size:20px;font-weight:800">${title}</h2><p class="muted" style="margin-top:6px">${text}</p></div><div class="panel-foot" style="justify-content:center"><button class="btn" data-act="ov-close" data-autofocus>Cancel</button><button class="btn ${danger ? 'danger' : 'primary'}" data-act="${yesAct}" ${yesData}>${yes}</button></div>`;
 
 /* ---------- Toasts ---------- */

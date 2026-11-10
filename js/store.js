@@ -88,10 +88,13 @@ function nextOrderId() {
   const seq = Math.max(...S.orders.map(o => parseInt(o.id.slice(-4), 10))) + 1;
   return `BM-${yymm}-${String(seq).padStart(4, '0')}`;
 }
-function placeOrder(items, method) {
+function placeOrder(items, method, due) {
   method = method || S.profile.distributor.defaultPay || 'cod';
-  const o = { id: nextOrderId(), dist: ME_DIST, placed: now(), status: 'New', items: items.map(i => ({ sku: i.sku, qty: i.qty, price: prod(i.sku).price })), history: [{ status: 'New', at: now() }], pay: { method, status: method === 'cod' ? 'cod' : 'unpaid', txns: [] } };
+  const o = { id: nextOrderId(), dist: ME_DIST, placed: now(), status: 'New', items: items.map(i => ({ sku: i.sku, qty: i.qty, price: prod(i.sku).price })), history: [{ status: 'New', at: now() }], pay: { method, status: method === 'cod' ? 'cod' : method === 'later' ? 'later' : 'unpaid', txns: [] } };
+  if (method === 'later') o.pay.due = due || (dayStart(now()) + 7 * 86400000);
   S.orders.unshift(o);
+  const th = ensureThread(ME_DIST, o.id);   // the order chat exists right away
+  th.msgs.push({ from: 'system', at: now(), text: 'Order placed', detail: 'BilMagic will confirm your order shortly.', read: true });
   pushNotif('supplier', 'order', 'New order ' + o.id, `${dist(ME_DIST).name} placed an order for ${o.items.length} product${o.items.length > 1 ? 's' : ''}.`, '#/s/orders/' + o.id);
   return o;
 }
@@ -178,17 +181,34 @@ function addToShop(sku) { if (!S.shop[ME_DIST][sku]) S.shop[ME_DIST][sku] = { qt
 function resetData() { const role = S.role; S = seedState(); S.role = role; }
 
 /* ---------- Report maths ---------- */
-const rangeSeries = (days) => S.sales.daily.slice(-days);
+/* three views of sales: wholesale (B2B orders inside the system), retail (sold outside it), and both together */
+const dayKey = (ms) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+function dailyOf(kind) {
+  if (kind === 'wholesale') return S.sales.daily;
+  const add = {}; S.retail.log.forEach(r => { const k = dayKey(r.at); add[k] = (add[k] || 0) + r.qty * r.price; });
+  const retail = S.retail.daily.map(d => ({ date: d.date, value: d.value + (add[d.date] || 0) }));
+  return kind === 'retail' ? retail : S.sales.daily.map((d, i) => ({ date: d.date, value: d.value + retail[i].value }));
+}
+const rangeSeries = (days, kind = 'wholesale') => dailyOf(kind).slice(-days);
 const sum = (a) => a.reduce((s, x) => s + x.value, 0);
-function rangeStats(days) {
-  const cur = sum(rangeSeries(days));
-  const prevArr = S.sales.daily.slice(-days * 2, -days);
+function rangeStats(days, kind = 'wholesale') {
+  const all = dailyOf(kind), cur = sum(all.slice(-days));
+  const prevArr = all.slice(-days * 2, -days);
   const prev = prevArr.length === days ? sum(prevArr) : null;
   return { total: cur, prev, delta: prev ? (cur - prev) / prev * 100 : null };
 }
+const retailUnits = (days) => { const from = now() - days * 864e5, u = {}; S.retail.log.filter(r => r.at >= from).forEach(r => { u[r.sku] = (u[r.sku] || 0) + r.qty; }); return u; };
+/* record a sale made outside the B2B system: it lowers stock and joins the retail sales */
+function sellProduct(sku, qty) {
+  const p = prod(sku), prev = pStatus(p);
+  p.stock -= qty;
+  const r = { id: 'rs' + (S.retail.log.length + 1) + Math.random().toString(36).slice(2, 4), sku, qty, price: p.price, at: now() };
+  S.retail.log.push(r); alertIfCrossed(p, prev); return r;
+}
 function topSellers(days, n = 5) {
   const total = sum(rangeSeries(days));
-  return S.products.map(p => { const units = Math.max(1, Math.round(S.sales.sold30[p.sku] * total / S.sales.rev30)); return { p, units, value: units * p.price }; })
+  const ru = retailUnits(days);
+  return S.products.map(p => { const units = Math.max(1, Math.round(S.sales.sold30[p.sku] * total / S.sales.rev30)) + (ru[p.sku] || 0); return { p, units, value: units * p.price }; })
     .sort((a, b) => b.value - a.value).slice(0, n);
 }
 function stockValue() {

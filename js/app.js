@@ -104,6 +104,7 @@ function shell(r, body) {
         <div class="top-search"><span class="i-left">${icon('search')}</span><input id="gsearch" type="search" placeholder="Search products or SKU" aria-label="Search products" data-act-enter="gsearch"></div>
         <div class="top-actions">
           <span class="pill-sample">Sample data · simulated</span>
+          ${role === 'supplier' ? `<button class="icon-btn" data-act="undo" aria-label="Undo" ${UNDO.canUndo ? '' : 'disabled'} title="Undo (Ctrl+Z)">${icon('undo')}</button><button class="icon-btn" data-act="redo" aria-label="Redo" ${UNDO.canRedo ? '' : 'disabled'} title="Redo (Ctrl+Shift+Z)">${icon('redo')}</button>` : ''}
           ${role === 'distributor' ? `<a class="icon-btn" href="#/d/cart" aria-label="Cart">${icon('cart')}${cartCount() ? `<span class="badge-n">${cartCount()}</span>` : ''}</a>` : ''}
           <button class="icon-btn" data-act="bell" aria-label="Notifications">${icon('bell')}${nUn ? `<span class="badge-n">${nUn}</span>` : ''}</button>
           <button class="av" data-act="user-menu" aria-label="Account menu" style="border:0">${esc(initials(meName))}</button>
@@ -234,9 +235,9 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const fn = ACTS[el.dataset.act]; if (!fn) return;
   if (el.tagName === 'A' && el.dataset.act === 'ov-close') { fn(el.dataset, el, e); return; }
-  e.preventDefault(); fn(el.dataset, el, e);
+  e.preventDefault(); UNDO.run(el.dataset.act, () => fn(el.dataset, el, e));
 });
-document.addEventListener('submit', (e) => { const f = e.target.closest('[data-submit]'); if (!f) return; e.preventDefault(); const fn = SUBMIT[f.dataset.submit]; if (fn) fn(); });
+document.addEventListener('submit', (e) => { const f = e.target.closest('[data-submit]'); if (!f) return; e.preventDefault(); const fn = SUBMIT[f.dataset.submit]; if (fn) UNDO.run('submit-' + f.dataset.submit, fn); });
 document.addEventListener('input', (e) => {
   const t = e.target;
   if (t.dataset.form) { FORM[t.dataset.form] = t.type === 'checkbox' ? t.checked : t.value; return; }

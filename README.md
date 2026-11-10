@@ -14,7 +14,7 @@ Pick **Supplier** or **Distributor**, enter any email and a password of 6+ chara
 ## Screens
 Supplier (`#/s/...`): dashboard, inventory (+ product drawer, adjust stock, add/edit, archive/restore), orders (+ drawer, advance/cancel), distributors, returns (+ process), messages, reports, notifications, settings, more (phone).
 Distributor (`#/d/...`): home (+ reorder low items), catalog, product, cart, order placed, orders and returns (+ order detail, cancel, reorder again), new return request, return submitted, my stock, messages, reports, notifications, settings, menu (phone).
-Payments (simulated): Cash on Delivery, E-wallet and Bank (card or bank transfer). Transactions pages for both roles (`#/s/transactions`, `#/d/transactions`).
+Payments (simulated): Cash on Delivery, E-wallet, Bank (card or bank transfer) and Pay Later (consignment: pick a due date on a calendar, up to 14 days; 2% of the order total per day late, no grace period; the supplier can waive interest with a reason). Transactions pages for both roles (`#/s/transactions`, `#/d/transactions`).
 Shared: sign-in, forgot password, sign-out dialog.
 
 ## Responsive behaviour
@@ -53,3 +53,12 @@ Edit `data/billiard_inventory.csv`, then regenerate `js/csv.js` (one line wraps 
 
 ## Payment simulation
 Only test values work: cards 4242 4242 4242 4242 (success), 5555 5555 5555 4444 (success), 4000 0000 0000 0002 (declined); e-wallet code 123456, mobile numbers ending in 0000 are declined. Nothing is stored or sent.
+
+## Pay Later
+The simulated date is Oct 28, 2026. Sample data includes overdue Pay Later orders (BM-2610-0141, BM-2610-0142), one due soon (BM-2610-0148) and one paid late (BM-2609-0140). Interest = 2% of order total x days late, shown as its own line; it stops when the order is paid. Supplier: Mark as paid, Waive interest (reason required).
+
+## Sold, sales charts and undo
+- Inventory rows and the product view have **Sold** (sale outside the B2B system; lowers stock; counts as retail) and **Stock count** buttons. Price in the Sold dialog is the current price.
+- Dashboard: Total sales chart. Reports: Total, Wholesale and Retail line charts plus recent retail sales.
+- Undo/Redo (supplier): top bar buttons, toast button, Ctrl+Z / Ctrl+Shift+Z for the last 30 moves; inside dialogs Ctrl+Z steps through typing. A refresh clears the history.
+- js/undo.js holds the undo logic.
